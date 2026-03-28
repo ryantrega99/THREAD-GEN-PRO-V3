@@ -389,6 +389,14 @@ function App() {
 
   const handleGenerate = async () => {
     if (!params.topic) return;
+
+    // Auto-detect Hanif Style Mode from keywords
+    let finalTone = params.tone;
+    if (params.topic.toLowerCase().includes('gaya hanif') || params.topic.toLowerCase().includes('style hanifmuh')) {
+      finalTone = 'HANIFMUH';
+      setParams(prev => ({ ...prev, tone: 'HANIFMUH' }));
+    }
+
     setIsGenerating(true);
     setIsGeneratingImage(false);
     setError(null);
@@ -396,7 +404,7 @@ function App() {
     setCoverImage(null);
     
     try {
-      const result = await generateThread({ ...params, apiKey: userApiKey });
+      const result = await generateThread({ ...params, tone: finalTone, apiKey: userApiKey });
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
@@ -1111,23 +1119,28 @@ function App() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Pilih Tone</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {[
                       { id: 'GALAK', label: 'Galak', icon: Flame },
                       { id: 'SANTAI', label: 'Santai', icon: MessageCircle },
                       { id: 'MOTIVASI', label: 'Motivasi', icon: Sparkles },
                       { id: 'HUMOR', label: 'Humor', icon: Zap },
-                      { id: 'HANIFMUH', label: 'Hanif Style', icon: User }
+                      { id: 'HANIFMUH', label: 'Hanif', icon: User, badge: 'NEW' }
                     ].map((opt) => (
                       <button
                         key={opt.id}
                         onClick={() => setParams({ ...params, tone: opt.id as any })}
-                        className={`p-2 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                        className={`relative p-2 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
                           params.tone === opt.id 
                             ? 'border-indigo-600 bg-indigo-50' 
                             : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                         }`}
                       >
+                        {opt.badge && (
+                          <span className="absolute -top-1 -right-1 px-1 bg-red-500 text-white text-[6px] font-black rounded-full animate-pulse">
+                            {opt.badge}
+                          </span>
+                        )}
                         <opt.icon className={`w-3 h-3 ${params.tone === opt.id ? 'text-indigo-600' : 'text-gray-400'}`} />
                         <span className={`text-[9px] font-black uppercase ${params.tone === opt.id ? 'text-indigo-600' : 'text-gray-500'}`}>
                           {opt.label}
