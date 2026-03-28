@@ -1,15 +1,13 @@
+import "dotenv/config";
 import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-
 app.use(express.json());
+
+// Diagnostic log for server start
+console.log("Server starting... VERCEL:", !!process.env.VERCEL, "NODE_ENV:", process.env.NODE_ENV);
+console.log("GEMINI_API_KEY present:", !!process.env.GEMINI_API_KEY);
 
 const SYSTEM_INSTRUCTION = `Kamu adalah asisten yang bertugas menulis utas Twitter/X dalam Bahasa Indonesia.
 
@@ -49,8 +47,10 @@ app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
     environment: process.env.NODE_ENV,
+    vercel: !!process.env.VERCEL,
     hasApiKey: !!process.env.GEMINI_API_KEY,
-    apiKeyLength: process.env.GEMINI_API_KEY?.length || 0
+    apiKeyLength: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -58,10 +58,10 @@ app.get("/api/health", (req, res) => {
 app.post("/api/generate-thread", async (req, res) => {
   try {
     const params = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey || apiKey.trim() === "") {
-      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan di server. Pastikan Anda sudah menambahkan 'GEMINI_API_KEY' di Environment Variables Vercel dan melakukan redeploy." });
+      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan. Tambahkan di Vercel Environment Variables." });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -73,34 +73,29 @@ app.post("/api/generate-thread", async (req, res) => {
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
+        maxOutputTokens: 2048,
       },
     });
 
     const text = response.text || "";
-    
-    // Split Content
     const [mainContent, boosterPart] = text.split("===VIRAL_BOOSTER===");
     
     let tweets = (mainContent || "").split("\n").filter(line => line.match(/^\d+\//)).map(t => t.trim());
-    
     if (tweets.length === 0) {
       tweets = (mainContent || "").split("\n\n").filter(t => t.trim().length > 0);
     }
 
-    // Parse Booster
     let booster: any = null;
     if (boosterPart) {
       const lines = boosterPart.trim().split('\n');
       const hashtags = lines.find(l => l.includes('HASHTAG:'))?.split('HASHTAG:')[1]?.trim();
       const bestTime = lines.find(l => l.includes('WAKTU POSTING TERBAIK:'))?.split('WAKTU POSTING TERBAIK:')[1]?.trim();
       const hooks = lines.filter(l => l.match(/^\d\./)).map(l => l.replace(/^\d\.\s*/, '').trim());
-      
       booster = { hashtags, bestTime, hooks };
     }
 
     res.json({ tweets, booster });
   } catch (error: any) {
-    console.error("Server Error (Thread):", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 });
@@ -109,23 +104,17 @@ app.post("/api/generate-thread", async (req, res) => {
 app.post("/api/generate-image", async (req, res) => {
   try {
     const { prompt } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey || apiKey.trim() === "") {
-      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan di server. Pastikan Anda sudah menambahkan 'GEMINI_API_KEY' di Environment Variables Vercel dan melakukan redeploy." });
+      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan." });
     }
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [{ text: prompt }],
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        },
-      },
+      contents: { parts: [{ text: prompt }] },
+      config: { imageConfig: { aspectRatio: "1:1" } },
     });
 
     const candidate = response.candidates?.[0];
@@ -138,7 +127,6 @@ app.post("/api/generate-image", async (req, res) => {
     }
     res.status(404).json({ error: "No image generated" });
   } catch (error: any) {
-    console.error("Server Error (Image):", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 });
@@ -146,57 +134,48 @@ app.post("/api/generate-image", async (req, res) => {
 // API Route for Trending Topics
 app.get("/api/trending-topics", async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey || apiKey.trim() === "") {
-      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan di server. Pastikan Anda sudah menambahkan 'GEMINI_API_KEY' di Environment Variables Vercel dan melakukan redeploy." });
+      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan." });
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `Kamu adalah AI yang tahu berita terkini Indonesia. 
-Sebutkan 7 topik yang kemungkinan sedang trending di Indonesia bulan Maret 2026. 
-Format jawaban HANYA daftar bernomor:
-[emoji] Judul Topik
-Tanpa penjelasan tambahan apapun.`;
+    const prompt = `Sebutkan 7 topik trending di Indonesia Maret 2026. Format: [emoji] Judul Topik.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: prompt }] }],
     });
 
-    const text = response.text || "";
-    const topics = text.split('\n')
+    const topics = (response.text || "").split('\n')
       .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
       .filter(line => line.length > 0)
       .slice(0, 7);
 
     res.json({ topics });
   } catch (error: any) {
-    console.error("Server Error (Trending):", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 });
 
-// Vite middleware for development
-if (process.env.NODE_ENV !== "production") {
-  const { createServer: createViteServer } = await import("vite");
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
-} else {
-  const distPath = path.join(process.cwd(), "dist");
-  app.use(express.static(distPath));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-}
+// Local development server
+const isLocal = process.env.NODE_ENV !== "production" && !process.env.VERCEL;
 
-// Only listen if not on Vercel
-if (!process.env.VERCEL) {
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+if (isLocal) {
+  try {
+    const { createServer } = await import("vite");
+    const vite = await createServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+    const PORT = Number(process.env.PORT) || 3000;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Local server running on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start local Vite server:", err);
+  }
 }
 
 export default app;

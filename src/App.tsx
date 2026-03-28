@@ -203,8 +203,14 @@ function App() {
     try {
       const response = await fetch('/api/trending-topics');
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Gagal mengambil trending topics.");
+        let errMsg = "Gagal mengambil trending topics.";
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {
+          errMsg = `Server Error (${response.status})`;
+        }
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -425,8 +431,14 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Gagal generate thread');
+        let errMsg = 'Gagal generate thread';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {
+          errMsg = `Server Error (${response.status}): ${response.statusText}`;
+        }
+        throw new Error(errMsg);
       }
 
       const result = await response.json();
@@ -469,8 +481,14 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Gagal generate gambar');
+        let errMsg = 'Gagal generate gambar';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {
+          errMsg = `Server Error (${response.status})`;
+        }
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
