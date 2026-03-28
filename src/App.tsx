@@ -1257,50 +1257,6 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
-                    {booster.viralScore && (
-                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                          <TrendingUp className="w-2.5 h-2.5" />
-                          Viral Score
-                        </div>
-                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
-                          {booster.viralScore}
-                        </p>
-                      </div>
-                    )}
-
-                    {booster.antiGhosting && (
-                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                          <ShieldCheck className="w-2.5 h-2.5" />
-                          Anti-Ghosting
-                        </div>
-                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
-                          {booster.antiGhosting}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                      <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                        <Hash className="w-2.5 h-2.5" />
-                        Hashtag
-                      </div>
-                      <p className="text-xs font-bold leading-relaxed">
-                        {booster.hashtags}
-                      </p>
-                    </div>
-
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                      <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                        <Calendar className="w-2.5 h-2.5" />
-                        Waktu Posting
-                      </div>
-                      <p className="text-xs font-bold leading-relaxed">
-                        {booster.bestTime}
-                      </p>
-                    </div>
-
                     <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-3">
                       <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
                         <MousePointer2 className="w-2.5 h-2.5" />
@@ -1399,50 +1355,6 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
-                    {booster.viralScore && (
-                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                          <TrendingUp className="w-2.5 h-2.5" />
-                          Viral Score
-                        </div>
-                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
-                          {booster.viralScore}
-                        </p>
-                      </div>
-                    )}
-
-                    {booster.antiGhosting && (
-                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                          <ShieldCheck className="w-2.5 h-2.5" />
-                          Anti-Ghosting
-                        </div>
-                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
-                          {booster.antiGhosting}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                      <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                        <Hash className="w-2.5 h-2.5" />
-                        Hashtag
-                      </div>
-                      <p className="text-xs font-bold leading-relaxed">
-                        {booster.hashtags}
-                      </p>
-                    </div>
-
-                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
-                      <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
-                        <Calendar className="w-2.5 h-2.5" />
-                        Waktu Posting
-                      </div>
-                      <p className="text-xs font-bold leading-relaxed">
-                        {booster.bestTime}
-                      </p>
-                    </div>
-
                     <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-3">
                       <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
                         <MousePointer2 className="w-2.5 h-2.5" />
