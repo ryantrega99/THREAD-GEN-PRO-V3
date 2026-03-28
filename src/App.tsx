@@ -194,6 +194,32 @@ function App() {
   const [slotsLeft, setSlotsLeft] = useState(3);
   const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
   const [userApiKey, setUserApiKey] = useState('');
+  const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
+  const [isFetchingTrending, setIsFetchingTrending] = useState(false);
+
+  const fetchTrendingTopics = async () => {
+    setIsFetchingTrending(true);
+    try {
+      const response = await fetch('/api/trending-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: userApiKey })
+      });
+      const data = await response.json();
+      if (data.topics) {
+        setTrendingTopics(data.topics);
+      } else if (data.error) {
+        setNotificationMsg(data.error);
+        setShowNotification(true);
+      }
+    } catch (err) {
+      console.error("Fetch trending error:", err);
+      setNotificationMsg("Gagal mengambil topik trending.");
+      setShowNotification(true);
+    } finally {
+      setIsFetchingTrending(false);
+    }
+  };
 
   useEffect(() => {
     const savedApiKey = localStorage.getItem('threadgen_user_api_key');
@@ -390,13 +416,6 @@ function App() {
   const handleGenerate = async () => {
     if (!params.topic) return;
 
-    // Auto-detect Hanif Style Mode from keywords
-    let finalTone = params.tone;
-    if (params.topic.toLowerCase().includes('gaya hanif') || params.topic.toLowerCase().includes('style hanifmuh')) {
-      finalTone = 'HANIFMUH';
-      setParams(prev => ({ ...prev, tone: 'HANIFMUH' }));
-    }
-
     setIsGenerating(true);
     setIsGeneratingImage(false);
     setError(null);
@@ -404,7 +423,7 @@ function App() {
     setCoverImage(null);
     
     try {
-      const result = await generateThread({ ...params, tone: finalTone, apiKey: userApiKey });
+      const result = await generateThread({ ...params, apiKey: userApiKey });
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
@@ -1081,12 +1100,40 @@ function App() {
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
                 </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold">Thread Gen Pro v10</h2>
-                  <p className="text-xs sm:text-sm text-gray-400">Asisten Kreatif Threads Kamu</p>
+                  <h2 className="text-lg sm:text-xl font-bold">Asisten Utas Santai</h2>
+                  <p className="text-xs sm:text-sm text-gray-400">Nulis Utas Jadi Lebih Personal</p>
                 </div>
               </div>
 
               <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Topik Trending</label>
+                    <button 
+                      onClick={fetchTrendingTopics}
+                      disabled={isFetchingTrending}
+                      className="text-[10px] sm:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors disabled:opacity-50"
+                    >
+                      {isFetchingTrending ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                      Cari Topik Trending
+                    </button>
+                  </div>
+                  
+                  {trendingTopics.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {trendingTopics.map((topic, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setParams({ ...params, topic })}
+                          className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
+                        >
+                          {topic}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Bahan Konten</label>
                   <textarea 
@@ -1095,85 +1142,8 @@ function App() {
                     value={params.topic}
                     onChange={(e) => setParams({...params, topic: e.target.value})}
                   />
-                  {!params.topic && (
-                    <div className="grid grid-cols-1 gap-2 mt-2">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Belum punya ide? Coba ini:</p>
-                      {[
-                        "Pengalaman pribadi yang bikin kamu berubah",
-                        "Opini yang berbeda dari kebanyakan orang",
-                        "Kesalahan umum yang sering dilakukan orang",
-                        "Hal yang baru kamu sadari belakangan ini",
-                        "Cerita gagal tapi ada pelajarannya"
-                      ].map((suggestion, i) => (
-                        <button 
-                          key={i}
-                          onClick={() => setParams({...params, topic: suggestion})}
-                          className="text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs text-gray-500 transition-all border border-gray-100"
-                        >
-                          {i + 1}. {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Pilih Tone</label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {[
-                      { id: 'GALAK', label: 'Galak', icon: Flame },
-                      { id: 'SANTAI', label: 'Santai', icon: MessageCircle },
-                      { id: 'MOTIVASI', label: 'Motivasi', icon: Sparkles },
-                      { id: 'HUMOR', label: 'Humor', icon: Zap },
-                      { id: 'HANIFMUH', label: 'Hanif', icon: User, badge: 'NEW' }
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setParams({ ...params, tone: opt.id as any })}
-                        className={`relative p-2 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
-                          params.tone === opt.id 
-                            ? 'border-indigo-600 bg-indigo-50' 
-                            : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                        }`}
-                      >
-                        {opt.badge && (
-                          <span className="absolute -top-1 -right-1 px-1 bg-red-500 text-white text-[6px] font-black rounded-full animate-pulse">
-                            {opt.badge}
-                          </span>
-                        )}
-                        <opt.icon className={`w-3 h-3 ${params.tone === opt.id ? 'text-indigo-600' : 'text-gray-400'}`} />
-                        <span className={`text-[9px] font-black uppercase ${params.tone === opt.id ? 'text-indigo-600' : 'text-gray-500'}`}>
-                          {opt.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Pilih Format</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'PENDEK', label: 'FORMAT A', desc: 'Pendek (3-5 Versi)' },
-                      { id: 'PANJANG', label: 'FORMAT B', desc: 'Panjang (Storytelling)' }
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setParams({ ...params, length: opt.id as any })}
-                        className={`p-3 rounded-xl border-2 transition-all text-left ${
-                          params.length === opt.id 
-                            ? 'border-indigo-600 bg-indigo-50' 
-                            : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                        }`}
-                      >
-                        <p className={`text-[10px] font-black leading-tight ${params.length === opt.id ? 'text-indigo-600' : 'text-gray-500'}`}>
-                          {opt.label}
-                        </p>
-                        <p className="text-[10px] text-gray-400 mt-1">{opt.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <button 
                   onClick={handleGenerate}
                   disabled={isGenerating || !params.topic}
