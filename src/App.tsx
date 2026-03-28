@@ -43,6 +43,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
+import { GoogleGenAI } from "@google/genai";
 import { 
   collection, 
   doc, 
@@ -198,19 +199,37 @@ function App() {
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
+  const [activeTab, setActiveTab] = useState<'preview' | 'history'>('preview');
 
   const fetchTrendingTopics = async () => {
     setIsFetchingTrending(true);
     try {
-      const response = await fetch('/api/trending', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: userApiKey })
+      const apiKey = (userApiKey || "").trim() || (process.env.GEMINI_API_KEY || "").trim();
+      if (!apiKey) {
+        throw new Error("API Key tidak ditemukan.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const prompt = `Kamu adalah AI yang tahu berita terkini Indonesia. 
+Sebutkan 7 topik yang kemungkinan sedang trending di Indonesia bulan Maret 2026. 
+Format jawaban HANYA daftar bernomor:
+[emoji] Judul Topik
+Tanpa penjelasan tambahan apapun.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ parts: [{ text: prompt }] }],
       });
-      const data = await response.json();
-      if (data.topics && data.topics.length > 0) {
-        setTrendingTopics(data.topics);
-        setTrendingTimestamp(data.timestamp || Date.now());
+
+      const text = response.text || "";
+      const topics = text.split('\n')
+        .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
+        .filter(line => line.length > 0)
+        .slice(0, 7);
+
+      if (topics.length > 0) {
+        setTrendingTopics(topics);
+        setTrendingTimestamp(Date.now());
       } else {
         setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
         setTrendingTimestamp(null);
@@ -433,7 +452,11 @@ function App() {
     setCoverImage(null);
     
     try {
-      const result = await generateThread({ ...params, apiKey: userApiKey });
+      const apiKey = (userApiKey || "").trim() || (process.env.GEMINI_API_KEY || "").trim();
+      const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}. 
+PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi rekomendasi produk Shopee yang relevan dengan topik ini.`;
+
+      const result = await generateThread({ ...params, topic: prompt, apiKey: userApiKey });
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
@@ -1299,8 +1322,24 @@ function App() {
 
           {/* Right Column: Preview & History (Mobile) */}
           <section className="lg:col-span-8 space-y-6 sm:space-y-8">
+            {/* Mobile Tabs */}
+            <div className="lg:hidden flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+              <button 
+                onClick={() => setActiveTab('preview')}
+                className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'preview' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400'}`}
+              >
+                Preview Utas
+              </button>
+              <button 
+                onClick={() => setActiveTab('history')}
+                className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400'}`}
+              >
+                Riwayat ({history.length})
+              </button>
+            </div>
+
             {/* History Section (Mobile/Tab Only) */}
-            {history.length > 0 && (
+            {activeTab === 'history' && history.length > 0 && (
               <div className="lg:hidden bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
                 <div className="flex items-center gap-3 mb-6 sm:mb-8">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
@@ -1313,10 +1352,13 @@ function App() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {history.slice(0, 4).map((item) => (
+                  {history.map((item) => (
                     <div 
                       key={item.id}
-                      onClick={() => loadFromHistory(item)}
+                      onClick={() => {
+                        loadFromHistory(item);
+                        setActiveTab('preview');
+                      }}
                       className="group p-3 sm:p-4 bg-gray-50 hover:bg-gray-100 rounded-xl sm:rounded-2xl cursor-pointer transition-all border border-transparent hover:border-gray-200 relative"
                     >
                       <div className="flex justify-between items-start gap-2">
@@ -1344,7 +1386,7 @@ function App() {
 
             {/* Viral Booster Section (Mobile Only) */}
             <AnimatePresence>
-              {booster && (
+              {activeTab === 'preview' && booster && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1394,7 +1436,9 @@ function App() {
               )}
             </AnimatePresence>
             {/* Custom API Key Input (Desktop Only) */}
-            <div className="hidden lg:flex bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex-col items-stretch gap-4">
+            {activeTab === 'preview' && (
+              <>
+                <div className="hidden lg:flex bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex-col items-stretch gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex-1 w-full space-y-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -1640,7 +1684,9 @@ function App() {
                 </motion.div>
               )}
             </div>
-          </section>
+          </>
+        )}
+      </section>
         </div>
       </main>
 
