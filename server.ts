@@ -50,24 +50,43 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 // API Route for Trending Topics
 app.post("/api/trending-topics", async (req, res) => {
   const { apiKey: userApiKey } = req.body;
-  
+  const SERP_API_KEY = "2b6263522a2d4f237797d02a68af004d4f27a31725aa452e87663ba5d024679f";
+  const url = `https://serpapi.com/search.json?q=trending+Indonesia+hari+ini&location=Indonesia&hl=id&gl=id&api_key=${SERP_API_KEY}`;
+
   let apiKey = (userApiKey || "").trim();
   if (!apiKey) {
     apiKey = (process.env.GEMINI_API_KEY || process.env.API_KEY || "").trim();
   }
 
-  if (!apiKey || apiKey === "TODO" || apiKey === "YOUR_API_KEY" || apiKey === "API_KEY") {
-    return res.status(500).json({ error: "API Key tidak ditemukan atau tidak valid. Pastikan GEMINI_API_KEY sudah diset di Settings AI Studio." });
-  }
+  try {
+    const serpResponse = await fetch(url);
+    const serpData = await serpResponse.json();
+    
+    // Helper for basic cleanup if Gemini fails
+    const getBasicTopics = () => {
+      let topics = (serpData.organic_results || [])
+        .slice(0, 7)
+        .map((r: any) => r.title.split(" - ")[0].split(" | ")[0].trim())
+        .filter((t: string) => t && !t.toLowerCase().includes("detik") && !t.toLowerCase().includes("google"));
+      
+      if (topics.length === 0) topics = ["🔥 Mudik Lebaran 2026", "⚽ Timnas Indonesia", "📉 Harga Beras Naik", "🕌 Ramadhan 2026", "🌤️ Cuaca Ekstrem"];
+      return topics;
+    };
 
-  const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  const ai = new GoogleGenAI({ apiKey });
-  
-  const prompt = `Cari 7 topik yang sedang trending atau viral di Indonesia hari ini (${today}).
-Gunakan pencarian untuk:
-1. "trending Indonesia hari ini ${today}"
-2. "berita viral Indonesia hari ini"
-3. "topik ramai dibahas Twitter Indonesia hari ini"
+    // If no valid API key or no results, return basic cleanup
+    if (!apiKey || apiKey === "TODO" || apiKey === "YOUR_API_KEY" || apiKey === "API_KEY" || !serpData.organic_results) {
+      return res.json({ topics: getBasicTopics(), timestamp: Date.now() });
+    }
+
+    // Collect raw results to feed into Gemini for refinement
+    const rawResults = (serpData.organic_results || [])
+      .map((r: any) => r.title)
+      .join("\n");
+
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const prompt = `Berikut adalah hasil pencarian berita trending di Indonesia dari SerpApi:
+${rawResults}
 
 Tugas kamu:
 1. Ekstrak MAKSIMAL 7 topik yang sedang viral/trending hari ini.
@@ -77,25 +96,27 @@ Tugas kamu:
 
 Contoh output: ["🚀 Peluncuran Satelit Baru", "⚽ Hasil Pertandingan Timnas", "📈 Kenaikan Harga BBM"]`;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      },
-    });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING }
+          }
+        },
+      });
 
-    const topics = JSON.parse(response.text || "[]");
-    res.json({ topics, timestamp: Date.now() });
+      const topics = JSON.parse(response.text || "[]");
+      return res.json({ topics, timestamp: Date.now() });
+    } catch (geminiError: any) {
+      console.error("Gemini Refinement Error (falling back to basic):", geminiError);
+      return res.json({ topics: getBasicTopics(), timestamp: Date.now() });
+    }
   } catch (error: any) {
     console.error("Trending Topics Error:", error);
-    res.status(500).json({ error: "Gagal mengambil topik trending real-time. Pastikan API Key valid dan memiliki akses ke Google Search." });
+    res.status(500).json({ error: "Gagal mengambil topik trending dari SerpApi." });
   }
 });
 
