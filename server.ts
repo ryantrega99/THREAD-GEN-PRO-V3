@@ -19,20 +19,20 @@ GAYA BAHASA:
 - Nada: serius tapi nggak menggurui
 
 FORMAT OUTPUT:
-- Setiap tweet diberi nomor: 1/, 2/, 3/, dst.
-- Maksimal 280 karakter per tweet
-- Kalau poin-nya panjang, pecah jadi beberapa tweet
-- Boleh pakai emoji secukupnya, jangan lebay
+- Gunakan pemisah "---" (tiga strip) di antara setiap tweet untuk memberikan jeda.
+- Setiap tweet dimulai dengan nomor: 1/, 2/, 3/, dst.
+- SETIAP TWEET (mulai dari tweet pertama sampai terakhir) WAJIB menyertakan satu link rekomendasi produk Shopee yang relevan di bagian akhir tweet tersebut.
+- Format link: "Btw, cek [produk terkait] di Shopee: [link Shopee]".
+- Gunakan placeholder "https://shope.ee/rekomendasi-produk" jika tidak tahu link spesifiknya.
+- Maksimal 280 karakter per tweet (termasuk link).
 
 STRUKTUR UTAS:
-1/ → Hook yang bikin penasaran, sedikit "ngaget-ngagetin" tapi jujur
-2/ → REKOMENDASI PRODUK: Setelah tweet pertama, WAJIB tambahkan satu tweet rekomendasi produk yang relevan dengan topik. 
-    Format: "Btw, buat yang nyari [produk terkait], ini ada yang bagus di Shopee: [link Shopee]". 
-    Gunakan link Shopee asli jika tahu, atau gunakan placeholder "https://shope.ee/rekomendasi-produk" jika tidak tahu link spesifiknya.
-3/ → Konteks / kenapa topik ini penting sekarang
-4/ dst → Isi utama, satu poin atau satu kategori per tweet
-5/ → Kesimpulan atau penutup
-6/ → CTA: save, repost, atau ajak tanya-tanya
+1/ [Hook] + [Link Shopee]
+---
+2/ [Isi/Konteks] + [Link Shopee]
+---
+3/ [Poin Utama] + [Link Shopee]
+... dst.
 
 Sertakan VIRAL BOOSTER di akhir dengan format:
 ===VIRAL_BOOSTER===
@@ -80,9 +80,15 @@ app.post("/api/generate-thread", async (req, res) => {
     const text = response.text || "";
     const [mainContent, boosterPart] = text.split("===VIRAL_BOOSTER===");
     
-    let tweets = (mainContent || "").split("\n").filter(line => line.match(/^\d+\//)).map(t => t.trim());
-    if (tweets.length === 0) {
-      tweets = (mainContent || "").split("\n\n").filter(t => t.trim().length > 0);
+    // Split by separator "---" first
+    let tweets = (mainContent || "").split("---").map(t => t.trim()).filter(t => t.length > 0);
+    
+    // Fallback if separator is not used
+    if (tweets.length <= 1) {
+      tweets = (mainContent || "").split("\n").filter(line => line.match(/^\d+\//)).map(t => t.trim());
+      if (tweets.length === 0) {
+        tweets = (mainContent || "").split("\n\n").filter(t => t.trim().length > 0);
+      }
     }
 
     let booster: any = null;
