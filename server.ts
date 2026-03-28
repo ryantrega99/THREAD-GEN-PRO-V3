@@ -49,7 +49,7 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 // API Route for Trending Topics
 app.post("/api/trending-topics", async (req, res) => {
-  const { apiKey: userApiKey } = req.body;
+  const { apiKey: userApiKey, serpApiKey: userSerpApiKey } = req.body;
   
   let apiKey = (userApiKey || "").trim();
   if (!apiKey) {
@@ -61,28 +61,40 @@ app.post("/api/trending-topics", async (req, res) => {
   }
 
   const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  const currentTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   const ai = new GoogleGenAI({ apiKey });
   
-  const prompt = `Cari 7 topik yang sedang trending atau viral di Indonesia hari ini (${today}).
-Gunakan pencarian untuk:
-1. "trending Indonesia hari ini ${today}"
-2. "berita viral Indonesia hari ini"
-3. "topik ramai dibahas Twitter Indonesia hari ini"
+  try {
+    // 1. Fetch from SerpApi
+    const serpApiKey = (userSerpApiKey || process.env.SERPAPI_KEY || "d110cd74837a63e1c4d2a627fe5039884da98ee6d42e07556fa4fd4a054ffc52").trim();
+    // tbs=qdr:d ensures results from the last 24 hours for real-time relevance
+    const serpApiUrl = `https://serpapi.com/search.json?q=trending+Indonesia+hari+ini&location=Indonesia&hl=id&gl=id&tbs=qdr:d&api_key=${serpApiKey}`;
+    const serpResponse = await fetch(serpApiUrl);
+    const serpData = await serpResponse.json();
+    
+    // 2. Use Gemini to refine results into specific viral topics
+    const prompt = `Berikut adalah data pencarian trending dari SerpApi untuk Indonesia hari ini (${today}, jam ${currentTime}). Data ini diambil dari hasil pencarian 24 jam terakhir:
+${JSON.stringify(serpData.organic_results?.slice(0, 10) || [])}
 
 Tugas kamu:
-1. Ekstrak MAKSIMAL 7 topik yang sedang viral/trending hari ini.
-2. Hasilnya harus berupa JUDUL TOPIK yang spesifik (contoh: "Mudik Lebaran 2026", "Timnas vs Iran"), BUKAN nama website atau sumber berita (contoh salah: "detikNews", "Google Berita").
-3. Tambahkan 1 emoji yang relevan di depan setiap topik.
-4. Berikan output dalam format JSON array of strings.
+1. Gunakan Google Search grounding untuk memverifikasi topik yang benar-benar viral dan SEDANG RAMAI dibahas di Indonesia SEKARANG JUGA (${today}, ${currentTime}).
+2. Fokus pada "Breaking News", "Viral di Twitter/X", atau "Topik Hangat" dalam 1-3 jam terakhir.
+3. Gunakan query pencarian internal:
+   - "berita viral Indonesia terbaru jam terakhir ${today}"
+   - "trending Twitter Indonesia ${today} ${currentTime}"
+   - "topik hangat dibahas netizen Indonesia sekarang"
+4. Ekstrak MAKSIMAL 7 topik yang paling segar/fresh dan REAL-TIME.
+5. Hasilnya harus berupa JUDUL TOPIK yang spesifik (contoh: "Mudik Lebaran 2026", "Timnas vs Iran", "Harga BBM Naik"), BUKAN nama website atau sumber berita (contoh salah: "detikNews", "Google Berita", "Berita Trending Hari Ini").
+6. Tambahkan 1 emoji yang relevan di depan setiap topik.
+7. Berikan output dalam format JSON array of strings.
 
 Contoh output: ["🚀 Peluncuran Satelit Baru", "⚽ Hasil Pertandingan Timnas", "📈 Kenaikan Harga BBM"]`;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
-        tools: [{ googleSearch: {} }],
+        tools: [{ googleSearch: {} }], // Keep search grounding for real-time verification
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -95,7 +107,7 @@ Contoh output: ["🚀 Peluncuran Satelit Baru", "⚽ Hasil Pertandingan Timnas",
     res.json({ topics, timestamp: Date.now() });
   } catch (error: any) {
     console.error("Trending Topics Error:", error);
-    res.status(500).json({ error: "Gagal mengambil topik trending real-time. Pastikan API Key valid dan memiliki akses ke Google Search." });
+    res.status(500).json({ error: "Gagal mengambil topik trending. Pastikan API Key valid." });
   }
 });
 

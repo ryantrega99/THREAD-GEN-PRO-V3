@@ -195,6 +195,8 @@ function App() {
   const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
   const [userApiKey, setUserApiKey] = useState('');
   const [isKeySaved, setIsKeySaved] = useState(false);
+  const [userSerpApiKey, setUserSerpApiKey] = useState('');
+  const [isSerpKeySaved, setIsSerpKeySaved] = useState(false);
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
@@ -205,7 +207,7 @@ function App() {
       const response = await fetch('/api/trending-topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: userApiKey })
+        body: JSON.stringify({ apiKey: userApiKey, serpApiKey: userSerpApiKey })
       });
       const data = await response.json();
       if (data.topics) {
@@ -230,6 +232,11 @@ function App() {
       setUserApiKey(savedApiKey);
       setIsKeySaved(true);
     }
+    const savedSerpApiKey = localStorage.getItem('threadgen_user_serp_api_key');
+    if (savedSerpApiKey) {
+      setUserSerpApiKey(savedSerpApiKey);
+      setIsSerpKeySaved(true);
+    }
     const savedAccess = localStorage.getItem('threadgen_pro_access');
     if (savedAccess === 'true') {
       setHasAccess(true);
@@ -241,11 +248,24 @@ function App() {
     if (key.trim()) {
       localStorage.setItem('threadgen_user_api_key', key.trim());
       setIsKeySaved(true);
-      showToast('API Key disimpan di browser!');
+      showToast('Gemini API Key disimpan!');
     } else {
       localStorage.removeItem('threadgen_user_api_key');
       setIsKeySaved(false);
-      showToast('API Key dihapus dari browser!');
+      showToast('Gemini API Key dihapus!');
+    }
+  };
+
+  const saveSerpApiKey = (key: string) => {
+    setUserSerpApiKey(key);
+    if (key.trim()) {
+      localStorage.setItem('threadgen_user_serp_api_key', key.trim());
+      setIsSerpKeySaved(true);
+      showToast('SerpApi Key disimpan!');
+    } else {
+      localStorage.removeItem('threadgen_user_serp_api_key');
+      setIsSerpKeySaved(false);
+      showToast('SerpApi Key dihapus!');
     }
   };
 
@@ -1071,36 +1091,81 @@ function App() {
           {/* Left Column: Form & History (Desktop) */}
           <aside className="lg:col-span-4 space-y-6 sm:space-y-8">
             {/* Custom API Key Input (Mobile/Tab Only) */}
-            <div className="lg:hidden bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex-1 w-full space-y-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Lock className="w-3 h-3 text-indigo-600" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Custom API Key</span>
+            <div className="lg:hidden bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] space-y-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex-1 w-full space-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Lock className="w-3 h-3 text-indigo-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      Gemini API Key {isKeySaved ? '(Tersimpan)' : '(Opsional)'}
+                    </span>
+                  </div>
+                  <input 
+                    type="password"
+                    placeholder="Masukkan Gemini API Key Anda"
+                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
+                    value={userApiKey}
+                    onChange={(e) => {
+                      setUserApiKey(e.target.value);
+                      if (isKeySaved) setIsKeySaved(false);
+                    }}
+                  />
                 </div>
-                <input 
-                  type="password"
-                  placeholder="Masukkan Gemini API Key Anda (Opsional)"
-                  className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
-                  value={userApiKey}
-                  onChange={(e) => setUserApiKey(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
-                <button 
-                  onClick={() => saveApiKey(userApiKey)}
-                  className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
-                >
-                  Simpan
-                </button>
-                {userApiKey && (
+                <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
                   <button 
-                    onClick={() => saveApiKey('')}
-                    className="p-2.5 text-red-400 hover:bg-red-50 rounded-xl transition-all"
-                    title="Hapus Key"
+                    onClick={() => saveApiKey(userApiKey)}
+                    className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    Simpan
                   </button>
-                )}
+                  {(userApiKey || isKeySaved) && (
+                    <button 
+                      onClick={() => saveApiKey('')}
+                      className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      title="Hapus Key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 border-t border-gray-50 pt-4">
+                <div className="flex-1 w-full space-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe className="w-3 h-3 text-indigo-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      SerpApi Key {isSerpKeySaved ? '(Tersimpan)' : '(Opsional)'}
+                    </span>
+                  </div>
+                  <input 
+                    type="password"
+                    placeholder="Masukkan SerpApi Key Anda"
+                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
+                    value={userSerpApiKey}
+                    onChange={(e) => {
+                      setUserSerpApiKey(e.target.value);
+                      if (isSerpKeySaved) setIsSerpKeySaved(false);
+                    }}
+                  />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
+                  <button 
+                    onClick={() => saveSerpApiKey(userSerpApiKey)}
+                    className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
+                  >
+                    Simpan
+                  </button>
+                  {(userSerpApiKey || isSerpKeySaved) && (
+                    <button 
+                      onClick={() => saveSerpApiKey('')}
+                      className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      title="Hapus Key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1118,7 +1183,13 @@ function App() {
               <div className="space-y-4 sm:space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Topik Trending</label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Topik Trending</label>
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full">
+                        <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Real-time</span>
+                      </div>
+                    </div>
                     <button 
                       onClick={fetchTrendingTopics}
                       disabled={isFetchingTrending}
@@ -1145,7 +1216,7 @@ function App() {
                       {trendingTimestamp && (
                         <div className="flex items-center gap-1.5 text-[10px] text-gray-400 ml-1">
                           <Clock className="w-3 h-3" />
-                          <span>Data diperbarui: {new Date(trendingTimestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                          <span>Data diperbarui: {new Date(trendingTimestamp).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} WIB</span>
                         </div>
                       )}
                     </div>
@@ -1375,42 +1446,83 @@ function App() {
               )}
             </AnimatePresence>
             {/* Custom API Key Input (Desktop Only) */}
-            <div className="hidden lg:flex bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex-col sm:flex-row items-center gap-4">
-              <div className="flex-1 w-full space-y-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Lock className="w-3 h-3 text-indigo-600" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    Custom API Key {isKeySaved ? '(Tersimpan)' : '(Opsional)'}
-                  </span>
+            <div className="hidden lg:flex bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex-col items-stretch gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1 w-full space-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Lock className="w-3 h-3 text-indigo-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      Gemini API Key {isKeySaved ? '(Tersimpan)' : '(Opsional)'}
+                    </span>
+                  </div>
+                  <input 
+                    type="password"
+                    placeholder="Masukkan Gemini API Key Anda"
+                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
+                    value={userApiKey}
+                    onChange={(e) => {
+                      setUserApiKey(e.target.value);
+                      if (isKeySaved) setIsKeySaved(false);
+                    }}
+                  />
                 </div>
-                <input 
-                  type="password"
-                  placeholder="Masukkan Gemini API Key Anda (Opsional)"
-                  className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
-                  value={userApiKey}
-                  onChange={(e) => {
-                    setUserApiKey(e.target.value);
-                    if (isKeySaved) setIsKeySaved(false);
-                  }}
-                />
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
-                <button 
-                  onClick={() => saveApiKey(userApiKey)}
-                  className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
-                >
-                  Simpan
-                </button>
-                {(userApiKey || isKeySaved) && (
+                <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
                   <button 
-                    onClick={() => saveApiKey('')}
-                    className="flex items-center gap-2 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider"
-                    title="Hapus Key"
+                    onClick={() => saveApiKey(userApiKey)}
+                    className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Hapus</span>
+                    Simpan
                   </button>
-                )}
+                  {(userApiKey || isKeySaved) && (
+                    <button 
+                      onClick={() => saveApiKey('')}
+                      className="flex items-center gap-2 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider"
+                      title="Hapus Key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Hapus</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 border-t border-gray-50 pt-4">
+                <div className="flex-1 w-full space-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe className="w-3 h-3 text-indigo-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      SerpApi Key {isSerpKeySaved ? '(Tersimpan)' : '(Opsional)'}
+                    </span>
+                  </div>
+                  <input 
+                    type="password"
+                    placeholder="Masukkan SerpApi Key Anda"
+                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
+                    value={userSerpApiKey}
+                    onChange={(e) => {
+                      setUserSerpApiKey(e.target.value);
+                      if (isSerpKeySaved) setIsSerpKeySaved(false);
+                    }}
+                  />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
+                  <button 
+                    onClick={() => saveSerpApiKey(userSerpApiKey)}
+                    className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
+                  >
+                    Simpan
+                  </button>
+                  {(userSerpApiKey || isSerpKeySaved) && (
+                    <button 
+                      onClick={() => saveSerpApiKey('')}
+                      className="flex items-center gap-2 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider"
+                      title="Hapus Key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Hapus</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
