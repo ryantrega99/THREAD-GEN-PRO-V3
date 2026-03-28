@@ -194,8 +194,6 @@ function App() {
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
   const [slotsLeft, setSlotsLeft] = useState(3);
   const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
-  const [userApiKey, setUserApiKey] = useState('');
-  const [isKeySaved, setIsKeySaved] = useState(false);
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
@@ -204,9 +202,9 @@ function App() {
   const fetchTrendingTopics = async () => {
     setIsFetchingTrending(true);
     try {
-      const apiKey = (userApiKey || "").trim() || (process.env.GEMINI_API_KEY || "").trim();
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error("API Key tidak ditemukan.");
+        throw new Error("GEMINI_API_KEY tidak ditemukan.");
       }
 
       const ai = new GoogleGenAI({ apiKey });
@@ -244,29 +242,11 @@ Tanpa penjelasan tambahan apapun.`;
   };
 
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('threadgen_user_api_key');
-    if (savedApiKey) {
-      setUserApiKey(savedApiKey);
-      setIsKeySaved(true);
-    }
     const savedAccess = localStorage.getItem('threadgen_pro_access');
     if (savedAccess === 'true') {
       setHasAccess(true);
     }
   }, []);
-
-  const saveApiKey = (key: string) => {
-    setUserApiKey(key);
-    if (key.trim()) {
-      localStorage.setItem('threadgen_user_api_key', key.trim());
-      setIsKeySaved(true);
-      showToast('Gemini API Key disimpan!');
-    } else {
-      localStorage.removeItem('threadgen_user_api_key');
-      setIsKeySaved(false);
-      showToast('Gemini API Key dihapus!');
-    }
-  };
 
   // Firebase Connection Test
   useEffect(() => {
@@ -452,11 +432,10 @@ Tanpa penjelasan tambahan apapun.`;
     setCoverImage(null);
     
     try {
-      const apiKey = (userApiKey || "").trim() || (process.env.GEMINI_API_KEY || "").trim();
       const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}. 
 PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi rekomendasi produk Shopee yang relevan dengan topik ini.`;
 
-      const result = await generateThread({ ...params, topic: prompt, apiKey: userApiKey });
+      const result = await generateThread({ ...params, topic: prompt });
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
@@ -480,11 +459,7 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
       }
     } catch (err: any) {
       const msg = err.message || 'Terjadi kesalahan sistem';
-      if (msg.includes("API key not valid") || msg.includes("API_KEY_INVALID")) {
-        setError("API Key tidak valid. Pastikan kamu sudah memasukkan API Key yang benar di Settings AI Studio atau Environment Variables Vercel.");
-      } else {
-        setError(`Error: ${msg}`);
-      }
+      setError(`Error: ${msg}`);
     } finally {
       setIsGenerating(false);
     }
@@ -493,7 +468,7 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
   const generateCoverImage = async (prompt: string) => {
     setIsGeneratingImage(true);
     try {
-      const apiKey = (userApiKey || process.env.GEMINI_API_KEY || "").trim();
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) return;
 
       const { GoogleGenAI } = await import("@google/genai");
@@ -1093,47 +1068,6 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10">
           {/* Left Column: Form & History (Desktop) */}
           <aside className="lg:col-span-4 space-y-6 sm:space-y-8">
-            {/* Custom API Key Input (Mobile/Tab Only) */}
-            <div className="lg:hidden bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] space-y-4">
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="flex-1 w-full space-y-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Lock className="w-3 h-3 text-indigo-600" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                      Gemini API Key {isKeySaved ? '(Tersimpan)' : '(Opsional)'}
-                    </span>
-                  </div>
-                  <input 
-                    type="password"
-                    placeholder="Masukkan Gemini API Key Anda"
-                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
-                    value={userApiKey}
-                    onChange={(e) => {
-                      setUserApiKey(e.target.value);
-                      if (isKeySaved) setIsKeySaved(false);
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
-                  <button 
-                    onClick={() => saveApiKey(userApiKey)}
-                    className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
-                  >
-                    Simpan
-                  </button>
-                  {(userApiKey || isKeySaved) && (
-                    <button 
-                      onClick={() => saveApiKey('')}
-                      className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                      title="Hapus Key"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
             <div className="bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
               <div className="flex items-center gap-3 mb-6 sm:mb-8">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-50 rounded-xl flex items-center justify-center">
@@ -1435,51 +1369,10 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
                 </motion.div>
               )}
             </AnimatePresence>
-            {/* Custom API Key Input (Desktop Only) */}
+
             {activeTab === 'preview' && (
               <>
-                <div className="hidden lg:flex bg-white p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] flex-col items-stretch gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-1 w-full space-y-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Lock className="w-3 h-3 text-indigo-600" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                      Gemini API Key {isKeySaved ? '(Tersimpan)' : '(Opsional)'}
-                    </span>
-                  </div>
-                  <input 
-                    type="password"
-                    placeholder="Masukkan Gemini API Key Anda"
-                    className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
-                    value={userApiKey}
-                    onChange={(e) => {
-                      setUserApiKey(e.target.value);
-                      if (isKeySaved) setIsKeySaved(false);
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
-                  <button 
-                    onClick={() => saveApiKey(userApiKey)}
-                    className="flex-1 sm:flex-none px-6 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg shadow-indigo-500/10"
-                  >
-                    Simpan
-                  </button>
-                  {(userApiKey || isKeySaved) && (
-                    <button 
-                      onClick={() => saveApiKey('')}
-                      className="flex items-center gap-2 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider"
-                      title="Hapus Key"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Hapus</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
                   <BrainCircuit className="w-5 h-5 text-indigo-600" />

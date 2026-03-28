@@ -4,7 +4,6 @@ export interface ThreadParams {
   topic: string;
   length?: 'PENDEK' | 'PANJANG' | 'REKOMENDASI';
   tone?: 'GALAK' | 'SANTAI' | 'MOTIVASI' | 'HUMOR' | 'HANIFMUH';
-  apiKey?: string;
 }
 
 export interface ViralBooster {
@@ -63,10 +62,10 @@ Tunggu input topik dari user, lalu langsung tulis utas-nya.`;
 
 export async function generateThread(params: ThreadParams): Promise<ThreadResponse> {
   try {
-    const apiKey = (params.apiKey || "").trim() || (process.env.GEMINI_API_KEY || "").trim();
+    const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
-      throw new Error("API Key tidak ditemukan. Masukkan API Key di pengaturan.");
+      throw new Error("GEMINI_API_KEY tidak ditemukan di environment variable.");
     }
 
     const ai = new GoogleGenAI({ apiKey });
