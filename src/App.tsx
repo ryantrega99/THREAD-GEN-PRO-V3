@@ -34,7 +34,7 @@ import {
   MousePointer2,
   LogIn
 } from 'lucide-react';
-import { generateThread, ThreadParams, ViralBooster } from './services/gemini';
+import type { ThreadParams, ViralBooster } from './services/gemini';
 import { auth, db } from './lib/firebase';
 import { 
   GoogleAuthProvider, 
@@ -43,7 +43,6 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
-import { GoogleGenAI } from "@google/genai";
 import { 
   collection, 
   doc, 
@@ -202,31 +201,15 @@ function App() {
   const fetchTrendingTopics = async () => {
     setIsFetchingTrending(true);
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY tidak ditemukan.");
+      const response = await fetch('/api/trending-topics');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Gagal mengambil trending topics.");
       }
 
-      const ai = new GoogleGenAI({ apiKey });
-      const prompt = `Kamu adalah AI yang tahu berita terkini Indonesia. 
-Sebutkan 7 topik yang kemungkinan sedang trending di Indonesia bulan Maret 2026. 
-Format jawaban HANYA daftar bernomor:
-[emoji] Judul Topik
-Tanpa penjelasan tambahan apapun.`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ parts: [{ text: prompt }] }],
-      });
-
-      const text = response.text || "";
-      const topics = text.split('\n')
-        .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
-        .filter(line => line.length > 0)
-        .slice(0, 7);
-
-      if (topics.length > 0) {
-        setTrendingTopics(topics);
+      const data = await response.json();
+      if (data.topics && data.topics.length > 0) {
+        setTrendingTopics(data.topics);
         setTrendingTimestamp(Date.now());
       } else {
         setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
@@ -435,7 +418,18 @@ Tanpa penjelasan tambahan apapun.`;
       const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}. 
 PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi rekomendasi produk Shopee yang relevan dengan topik ini.`;
 
-      const result = await generateThread({ ...params, topic: prompt });
+      const response = await fetch('/api/generate-thread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...params, topic: prompt })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Gagal generate thread');
+      }
+
+      const result = await response.json();
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
@@ -468,37 +462,20 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
   const generateCoverImage = async (prompt: string) => {
     setIsGeneratingImage(true);
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) return;
-
-      const { GoogleGenAI } = await import("@google/genai");
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            {
-              text: prompt,
-            },
-          ],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1",
-          },
-        },
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
       });
 
-      const candidate = response.candidates?.[0];
-      if (candidate?.content?.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData) {
-            const base64Data = part.inlineData.data;
-            setCoverImage(`data:image/png;base64,${base64Data}`);
-            break;
-          }
-        }
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Gagal generate gambar');
+      }
+
+      const data = await response.json();
+      if (data.image) {
+        setCoverImage(`data:image/png;base64,${data.image}`);
       }
     } catch (err) {
       console.error("Failed to generate image:", err);

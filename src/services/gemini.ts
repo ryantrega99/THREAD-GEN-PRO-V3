@@ -64,8 +64,9 @@ export async function generateThread(params: ThreadParams): Promise<ThreadRespon
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY tidak ditemukan di environment variable.");
+    if (!apiKey || apiKey.trim() === "") {
+      console.error("Critical: GEMINI_API_KEY is missing in process.env inside gemini.ts");
+      throw new Error("GEMINI_API_KEY tidak ditemukan di server. Pastikan Anda sudah menambahkan 'GEMINI_API_KEY' di Environment Variables Vercel dan melakukan redeploy.");
     }
 
     const ai = new GoogleGenAI({ apiKey });
