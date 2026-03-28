@@ -195,6 +195,7 @@ function App() {
   const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
   const [userApiKey, setUserApiKey] = useState('');
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
+  const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
 
   const fetchTrendingTopics = async () => {
@@ -208,6 +209,7 @@ function App() {
       const data = await response.json();
       if (data.topics) {
         setTrendingTopics(data.topics);
+        setTrendingTimestamp(data.timestamp || Date.now());
       } else if (data.error) {
         setNotificationMsg(data.error);
         setShowNotification(true);
@@ -1120,16 +1122,24 @@ function App() {
                   </div>
                   
                   {trendingTopics.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {trendingTopics.map((topic, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setParams({ ...params, topic })}
-                          className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
-                        >
-                          {topic}
-                        </button>
-                      ))}
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {trendingTopics.map((topic, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setParams({ ...params, topic })}
+                            className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
+                          >
+                            {topic}
+                          </button>
+                        ))}
+                      </div>
+                      {trendingTimestamp && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 ml-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Data diperbarui: {new Date(trendingTimestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
