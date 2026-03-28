@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - name: string (required) - User's full name
+    //   - email: string (required, email format) - User's email address
+    //   - role: string (required, enum: ['user', 'admin']) - User's role
+    //   - createdAt: timestamp (required) - Account creation timestamp
+    //
+    // Collection: threads
+    // Document ID: {threadId}
+    // Fields:
+    //   - uid: string (required) - Owner's UID
+    //   - topic: string (required) - Topic of the thread
+    //   - thread: list (required) - Array of tweets
+    //   - tone: string (optional) - Tone used
+    //   - booster: map (optional) - Viral booster info
+    //   - createdAt: timestamp (required) - Creation timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "sorotantrending@gmail.com" && request.auth.token.email_verified == true)); // Default admin
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'email', 'role', 'createdAt']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['user', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidThread(data) {
+      return hasOnlyAllowedFields(['uid', 'topic', 'thread', 'tone', 'booster', 'createdAt']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.topic is string && data.topic.size() > 0 && data.topic.size() < 500 &&
+             data.thread is list && data.thread.size() > 0 && data.thread.size() < 50 &&
+             (!('tone' in data) || (data.tone is string && data.tone in ['GALAK', 'SANTAI', 'MOTIVASI', 'HUMOR', 'HANIFMUH'])) &&
+             (!('booster' in data) || data.booster is map) &&
+             data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    match /threads/{threadId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidThread(request.resource.data);
+      allow update: if isDocOwner() && isValidThread(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+  }
+}
