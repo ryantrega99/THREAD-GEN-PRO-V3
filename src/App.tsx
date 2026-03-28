@@ -208,17 +208,17 @@ function App() {
         body: JSON.stringify({ apiKey: userApiKey })
       });
       const data = await response.json();
-      if (data.topics) {
+      if (data.topics && data.topics.length > 0) {
         setTrendingTopics(data.topics);
         setTrendingTimestamp(data.timestamp || Date.now());
-      } else if (data.error) {
-        setNotificationMsg(data.error);
-        setShowNotification(true);
+      } else {
+        setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
+        setTrendingTimestamp(null);
       }
     } catch (err) {
       console.error("Fetch trending error:", err);
-      setNotificationMsg("Gagal mengambil topik trending.");
-      setShowNotification(true);
+      setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
+      setTrendingTimestamp(null);
     } finally {
       setIsFetchingTrending(false);
     }
@@ -1146,13 +1146,19 @@ function App() {
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
                         {trendingTopics.map((topic, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setParams({ ...params, topic })}
-                            className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
-                          >
-                            {topic}
-                          </button>
+                          topic === "Ketik topik manual di bawah ya 🙏" ? (
+                            <div key={i} className="px-3 py-1.5 bg-gray-50 text-gray-500 text-[10px] font-medium rounded-full border border-gray-100 italic">
+                              {topic}
+                            </div>
+                          ) : (
+                            <button
+                              key={i}
+                              onClick={() => setParams({ ...params, topic })}
+                              className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
+                            >
+                              {topic}
+                            </button>
+                          )
                         ))}
                       </div>
                       {trendingTimestamp && (

@@ -61,17 +61,16 @@ app.post("/api/trending", async (req, res) => {
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  const prompt = `Cari 7 topik yang sedang viral dan trending di Indonesia hari ini. 
-Jawab hanya dengan daftar bernomor, format: [emoji] Judul Topik
-Jangan tambahkan penjelasan apapun.`;
+  const prompt = `Kamu adalah AI yang tahu berita terkini Indonesia. 
+Sebutkan 7 topik yang kemungkinan sedang trending di Indonesia bulan Maret 2026. 
+Format jawaban HANYA daftar bernomor:
+[emoji] Judul Topik
+Tanpa penjelasan tambahan apapun.`;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
     });
 
     const text = response.text || "";
