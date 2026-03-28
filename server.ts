@@ -184,8 +184,8 @@ Tugasmu:
 4. Jika pengguna meminta "collab", gunakan FORMAT OUTPUT COLLAB POST (V15).
 5. Jika mode normal: WAJIB gunakan minimal 1 teknik ANTI-GHOSTING (V4) di kalimat terakhir setiap post.
 6. Jika Format B: Pastikan ada CTA Shopee di post terakhir sesuai aturan.
-7. Sertakan VIRAL SCORE di akhir konten (kecuali mode roast/AB/collab).
-8. Sebutkan teknik ANTI-GHOSTING yang dipakai & alasannya singkat (kecuali mode roast/AB/collab).
+7. Sertakan VIRAL SCORE di akhir konten (kecuali mode roast/AB/collab) dalam blok ===VIRAL_SCORE===.
+8. Sebutkan teknik ANTI-GHOSTING yang dipakai & alasannya singkat (kecuali mode roast/AB/collab) dalam blok ===ANTI_GHOSTING===.
 9. Sertakan VIRAL BOOSTER di akhir dengan format:
    ===VIRAL_BOOSTER===
    HASHTAG: [3-5 hashtag relevan]
@@ -208,8 +208,10 @@ Pastikan gaya bahasanya sangat natural, anti-AI, dan relatable.`;
 
     const text = response.text || "";
     
-    // Split Viral Booster
-    const [threadContent, boosterContent] = text.split("===VIRAL_BOOSTER===");
+    // Split Content
+    const [mainContent, boosterPart] = text.split("===VIRAL_BOOSTER===");
+    const [threadPart, scorePart] = (mainContent || "").split("===VIRAL_SCORE===");
+    const [threadContent, ghostingPart] = (threadPart || "").split("===ANTI_GHOSTING===");
     
     let tweets = (threadContent || "").split("---").map(t => t.trim()).filter(t => t.length > 0);
     
@@ -226,9 +228,9 @@ Pastikan gaya bahasanya sangat natural, anti-AI, dan relatable.`;
     }
 
     // Parse Booster
-    let booster = null;
-    if (boosterContent) {
-      const lines = boosterContent.trim().split('\n');
+    let booster: any = null;
+    if (boosterPart) {
+      const lines = boosterPart.trim().split('\n');
       const hashtags = lines.find(l => l.includes('HASHTAG:'))?.split('HASHTAG:')[1]?.trim();
       const bestTime = lines.find(l => l.includes('WAKTU POSTING TERBAIK:'))?.split('WAKTU POSTING TERBAIK:')[1]?.trim();
       const hooks = lines.filter(l => l.match(/^\d\./)).map(l => l.replace(/^\d\.\s*/, '').trim());
@@ -238,6 +240,13 @@ Pastikan gaya bahasanya sangat natural, anti-AI, dan relatable.`;
         bestTime,
         hooks
       };
+    }
+
+    // Add Score and Ghosting info to booster if they exist
+    if (scorePart || ghostingPart) {
+      if (!booster) booster = {};
+      if (scorePart) booster.viralScore = scorePart.trim();
+      if (ghostingPart) booster.antiGhosting = ghostingPart.trim();
     }
 
     const result = { tweets, booster };

@@ -9,6 +9,8 @@ export interface ViralBooster {
   hashtags?: string;
   bestTime?: string;
   hooks?: string[];
+  viralScore?: string;
+  antiGhosting?: string;
 }
 
 export interface ThreadResponse {

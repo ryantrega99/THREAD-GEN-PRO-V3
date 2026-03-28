@@ -1257,6 +1257,30 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
+                    {booster.viralScore && (
+                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
+                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
+                          <TrendingUp className="w-2.5 h-2.5" />
+                          Viral Score
+                        </div>
+                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
+                          {booster.viralScore}
+                        </p>
+                      </div>
+                    )}
+
+                    {booster.antiGhosting && (
+                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
+                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
+                          <ShieldCheck className="w-2.5 h-2.5" />
+                          Anti-Ghosting
+                        </div>
+                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
+                          {booster.antiGhosting}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
                       <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
                         <Hash className="w-2.5 h-2.5" />
@@ -1375,6 +1399,30 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
+                    {booster.viralScore && (
+                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
+                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
+                          <TrendingUp className="w-2.5 h-2.5" />
+                          Viral Score
+                        </div>
+                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
+                          {booster.viralScore}
+                        </p>
+                      </div>
+                    )}
+
+                    {booster.antiGhosting && (
+                      <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
+                        <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
+                          <ShieldCheck className="w-2.5 h-2.5" />
+                          Anti-Ghosting
+                        </div>
+                        <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap">
+                          {booster.antiGhosting}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 space-y-2">
                       <div className="flex items-center gap-2 text-white/60 text-[9px] font-black uppercase tracking-widest">
                         <Hash className="w-2.5 h-2.5" />
@@ -1468,16 +1516,28 @@ function App() {
                 <h2 className="text-lg sm:text-xl font-bold">Preview Utas (X & Threads)</h2>
               </div>
               {thread.length > 0 && (
-                <button 
-                  onClick={() => {
-                    const allText = thread.join('\n\n---\n\n');
-                    navigator.clipboard.writeText(allText);
-                    showToast('Seluruh thread disalin!');
-                  }}
-                  className="text-xs font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg transition-all"
-                >
-                  Copy All
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      const allText = thread.map((t, i) => `${i + 1}/ ${t}`).join('\n\n');
+                      navigator.clipboard.writeText(allText);
+                      showToast('Thread disalin (dengan nomor)!');
+                    }}
+                    className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg transition-all"
+                  >
+                    Copy with Numbers
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const allText = thread.join('\n\n');
+                      navigator.clipboard.writeText(allText);
+                      showToast('Seluruh thread disalin!');
+                    }}
+                    className="text-xs font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+                  >
+                    Copy All
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1602,6 +1662,56 @@ function App() {
                   </motion.div>
                 ))}
               </AnimatePresence>
+
+              {/* Bottom History Section (Visible after generation) */}
+              {history.length > 0 && thread.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-20 pt-20 border-t border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                        <History className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold">Riwayat Terakhir</h2>
+                        <p className="text-xs text-gray-400">Akses cepat ke thread sebelumnya</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {history.slice(0, 4).map((item) => (
+                      <div 
+                        key={item.id}
+                        onClick={() => {
+                          loadFromHistory(item);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="group p-5 bg-white hover:bg-gray-50 rounded-[24px] cursor-pointer transition-all border border-gray-100 hover:border-indigo-600/30 shadow-[0_4px_20px_rgb(0,0,0,0.02)] relative"
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <p className="text-sm font-bold text-gray-700 line-clamp-2">
+                            {item.topic}
+                          </p>
+                          <div className="p-2 bg-gray-50 group-hover:bg-indigo-50 rounded-lg transition-all">
+                            <Zap className="w-3 h-3 text-gray-300 group-hover:text-indigo-600" />
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                          <div className="flex items-center gap-2 text-gray-400">
+                            <Clock className="w-3 h-3" />
+                            {new Date(item.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          </div>
+                          <span className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-all">Muat Ulang →</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
           </section>
         </div>
