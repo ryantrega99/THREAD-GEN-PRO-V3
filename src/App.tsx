@@ -194,6 +194,7 @@ function App() {
   const [slotsLeft, setSlotsLeft] = useState(3);
   const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
   const [userApiKey, setUserApiKey] = useState('');
+  const [isKeySaved, setIsKeySaved] = useState(false);
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
@@ -227,6 +228,7 @@ function App() {
     const savedApiKey = localStorage.getItem('threadgen_user_api_key');
     if (savedApiKey) {
       setUserApiKey(savedApiKey);
+      setIsKeySaved(true);
     }
     const savedAccess = localStorage.getItem('threadgen_pro_access');
     if (savedAccess === 'true') {
@@ -236,9 +238,15 @@ function App() {
 
   const saveApiKey = (key: string) => {
     setUserApiKey(key);
-    localStorage.setItem('threadgen_user_api_key', key);
-    if (key) showToast('API Key disimpan!');
-    else showToast('API Key dihapus!');
+    if (key.trim()) {
+      localStorage.setItem('threadgen_user_api_key', key.trim());
+      setIsKeySaved(true);
+      showToast('API Key disimpan di browser!');
+    } else {
+      localStorage.removeItem('threadgen_user_api_key');
+      setIsKeySaved(false);
+      showToast('API Key dihapus dari browser!');
+    }
   };
 
   // Firebase Connection Test
@@ -1371,14 +1379,19 @@ function App() {
               <div className="flex-1 w-full space-y-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Lock className="w-3 h-3 text-indigo-600" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Custom API Key</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Custom API Key {isKeySaved ? '(Tersimpan)' : '(Opsional)'}
+                  </span>
                 </div>
                 <input 
                   type="password"
                   placeholder="Masukkan Gemini API Key Anda (Opsional)"
                   className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl outline-none transition-all font-mono text-xs"
                   value={userApiKey}
-                  onChange={(e) => setUserApiKey(e.target.value)}
+                  onChange={(e) => {
+                    setUserApiKey(e.target.value);
+                    if (isKeySaved) setIsKeySaved(false);
+                  }}
                 />
               </div>
               <div className="flex gap-2 w-full sm:w-auto pt-1 sm:pt-4">
@@ -1388,13 +1401,14 @@ function App() {
                 >
                   Simpan
                 </button>
-                {userApiKey && (
+                {(userApiKey || isKeySaved) && (
                   <button 
                     onClick={() => saveApiKey('')}
-                    className="p-2.5 text-red-400 hover:bg-red-50 rounded-xl transition-all"
+                    className="flex items-center gap-2 px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all text-[10px] font-bold uppercase tracking-wider"
                     title="Hapus Key"
                   >
                     <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Hapus</span>
                   </button>
                 )}
               </div>
