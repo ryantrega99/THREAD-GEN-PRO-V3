@@ -421,13 +421,10 @@ function App() {
     setCoverImage(null);
     
     try {
-      const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}. 
-PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi rekomendasi produk Shopee yang relevan dengan topik ini.`;
-
       const response = await fetch('/api/generate-thread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...params, topic: prompt })
+        body: JSON.stringify(params)
       });
 
       if (!response.ok) {
@@ -591,7 +588,7 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
               transition={{ delay: 0.1 }}
               className="text-4xl sm:text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-8"
             >
-              KONTEN <span className="text-indigo-600">THREADS</span> VIRAL <br />DALAM <span className="text-purple-500">HITUNGAN</span> DETIK.
+              UTAS <span className="text-indigo-600">THREADS</span> ANTI-AI <br />DITULIS <span className="text-purple-500">KAYAK</span> MANUSIA.
             </motion.h1>
             
             <motion.p 
@@ -870,9 +867,9 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
             <h2 className="text-3xl font-black text-center mb-16">PERTANYAAN YANG SERING DIAJUKAN</h2>
             <div className="space-y-6">
               {[
-                { q: "Apakah hasilnya beneran gak kayak AI?", a: "Ya! Algoritma kami dirancang khusus untuk meniru gaya bahasa manusia Indonesia yang santai dan relatable." },
-                { q: "Bisa buat topik apa aja?", a: "Apapun. Mulai dari tech, finansial, curhat, sampai jualan produk affiliate." },
-                { q: "Apakah aman buat akun X & Threads saya?", a: "Sangat aman. Kami hanya membantu meracik konten, kamu tetap yang memposting secara manual." },
+                { q: "Apakah hasilnya beneran gak kayak AI?", a: "Ya! Algoritma kami dirancang khusus mengikuti gaya @benakribo yang santai, jujur, dan berasa kayak curhat ke temen." },
+                { q: "Bisa buat kategori apa aja?", a: "Apapun. Mulai dari skincare, gadget, makanan, sampai rekomendasi hotel atau tempat nongkrong." },
+                { q: "Apakah aman buat akun Threads saya?", a: "Sangat aman. Kami hanya membantu meracik konten yang 'human-like', kamu tetap yang memposting secara manual." },
                 { q: "Bagaimana cara mendapatkan kode akses?", a: "Klik tombol 'Aktivasi' atau 'Ambil Akses Sekarang', lalu beli kode melalui link pembayaran resmi kami. Kode akan dikirim otomatis dan bisa langsung kamu gunakan untuk aktivasi." }
               ].map((faq, i) => (
                 <div key={i} className="bg-white/5 border border-white/10 p-8 rounded-3xl space-y-4">
@@ -888,7 +885,7 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
 
           {/* Final CTA */}
           <section className="py-16 sm:py-32 text-center border-t border-white/5">
-            <h2 className="text-2xl sm:text-4xl md:text-6xl font-black mb-8 sm:mb-12">SIAP JADI RAJA <span className="text-indigo-600">X</span> & <span className="text-purple-500">THREADS</span>?</h2>
+            <h2 className="text-2xl sm:text-4xl md:text-6xl font-black mb-8 sm:mb-12">SIAP JADI RAJA <span className="text-indigo-600">THREADS</span> INDONESIA?</h2>
             <button 
               onClick={handleGetAccess}
               className="px-8 py-4 sm:px-12 sm:py-6 bg-white text-black font-black uppercase tracking-widest rounded-2xl text-base sm:text-xl hover:bg-gray-200 transition-all"
@@ -1124,9 +1121,9 @@ PENTING: Setelah tweet pertama (1/), tambahkan tweet kedua (2/) yang berisi reko
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Bahan Konten</label>
+                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Kategori & Daftar Produk</label>
                   <textarea 
-                    placeholder="Contoh: 'roast ini [paste]', 'A/B test ini [paste A & B]', atau 'buatin konten collab sama @kreator'..."
+                    placeholder="Contoh: 'Kategori: Skincare Cowok. Produk: Sabun cuci muka Kahf, Sunscreen Azarine, Moisturizer Glad2Glow'..."
                     className="w-full p-3 sm:p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl sm:rounded-2xl transition-all min-h-[100px] sm:min-h-[120px] resize-none outline-none font-medium placeholder:text-gray-300 text-sm sm:text-base"
                     value={params.topic}
                     onChange={(e) => setParams({...params, topic: e.target.value})}

@@ -9,38 +9,38 @@ app.use(express.json());
 console.log("Server starting... VERCEL:", !!process.env.VERCEL, "NODE_ENV:", process.env.NODE_ENV);
 console.log("GEMINI_API_KEY present:", !!process.env.GEMINI_API_KEY);
 
-const SYSTEM_INSTRUCTION = `Kamu adalah asisten yang bertugas menulis utas Twitter/X dalam Bahasa Indonesia.
+const SYSTEM_INSTRUCTION = `Kamu adalah kreator konten Threads Indonesia asli, nulis kayak orang beneran lagi ngetik dari hp, bukan AI. Gaya penulisan mengikuti @benakribo — kasual, jujur, opinionated, dan berasa kayak curhat ke temen, bukan review formal.
+
+ATURAN UTAMA — ANTI AI:
+- DILARANG pakai kata-kata yang kedengeran AI: "tentu saja", "sangat", "luar biasa", "sempurna", "pastinya", "tentunya", "dengan demikian", "sebagai kesimpulan", "tidak diragukan lagi".
+- DILARANG struktur yang terlalu rapi dan simetris. Manusia nulis berantakan sedikit.
+- BOLEH kalimat menggantung, tidak selesai sempurna.
+- BOLEH typo ringan yang wajar kayak "udh", "bgt", "krn", "tp", "yg", "jd", "emg", "bngt".
+- BOLEH pakai "..." di tengah kalimat buat jeda mikir.
+- JANGAN pakai bullet point atau numbering di dalam utas. Semua prosa mengalir.
+- Panjang per utas: pendek-pendek aja. 2–5 kalimat. Orang males baca yang panjang.
 
 GAYA BAHASA:
-- Gunakan kata "saya", "kamu", "kalian" — bukan "gue" atau "lo"
-- Santai, personal, dan relatable — kayak orang yang lagi sharing pengalaman ke temen
-- Boleh pakai singkatan: "yg", "dll", "bgt", "klo", "krn", "nggak"
-- Sesekali pakai ekspresi doa kalau konteksnya pas: "semoga nggak kejadian ya Allah", "amin"
-- Nada: serius tapi nggak menggurui
+- Orang pertama: "aku", bukan "saya" atau "gue".
+- Kedua: "kamu", bukan "lo" atau "anda".
+- Ketiga jamak: "kalian".
+- Nulis kayak lagi ngetik cepet dari hp, bukan essay.
+- Jujur soal kekurangan. Kalau zonk ya bilang zonk.
+- Sesekali boleh emosional dikit, kayak "aku sampe kecewa bgt sama ini" atau "seriously ini underrated parah".
 
-FORMAT OUTPUT:
-- Setiap tweet diberi nomor: 1/, 2/, 3/, dst.
-- Maksimal 280 karakter per tweet
-- Kalau poin-nya panjang, pecah jadi beberapa tweet
-- Boleh pakai emoji secukupnya, jangan lebay
+FORMAT THREAD:
+Utas 1 — HOOK:
+Mulai dengan emoji ⚠️ atau 🚨, lalu judul KAPITAL yang bikin penasaran. Diikuti kalimat pendek paralel buat bangun ekspektasi. Tutup dengan ngajak share versi kalian.
+PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
 
-STRUKTUR UTAS:
-1/ → Hook yang bikin penasaran, sedikit "ngaget-ngagetin" tapi jujur
-2/ → REKOMENDASI PRODUK: Setelah tweet pertama, WAJIB tambahkan satu tweet rekomendasi produk yang relevan dengan topik. 
-    Format: "Btw, buat yang nyari [produk terkait], ini ada yang bagus di Shopee: [link Shopee]". 
-    Gunakan link Shopee asli jika tahu, atau gunakan placeholder "https://shope.ee/rekomendasi-produk" jika tidak tahu link spesifiknya.
-3/ → Konteks / kenapa topik ini penting sekarang
-4/ dst → Isi utama, satu poin atau satu kategori per tweet
-5/ → Kesimpulan atau penutup
-6/ → CTA: save, repost, atau ajak tanya-tanya
+Utas 2–7 — ISI (1 produk per utas):
+Nama produk dulu di baris pertama. Terus langsung cerita pengalaman — bukan deskripsi produk. Harga boleh disebut kalau relevan. Akhiri dengan verdict singkat: worth it atau skip.
 
-Sertakan VIRAL BOOSTER di akhir dengan format:
-===VIRAL_BOOSTER===
-HASHTAG: #tag1 #tag2 #tag3
-WAKTU POSTING TERBAIK: [Waktu, misal: 19:00 WIB]
-HOOK ALTERNATIF:
-1. [Hook 1]
-2. [Hook 2]`;
+Utas terakhir — PENUTUP:
+Santai aja. Ajak kalian share rekomendasi versi sendiri. Tidak perlu dramatis.
+
+PENTING: Pisahkan setiap utas dengan tanda "---" agar sistem bisa memprosesnya menjadi daftar terpisah.
+Hasilkan 6-9 utas terpisah.`;
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -65,7 +65,7 @@ app.post("/api/generate-thread", async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}`;
+    const prompt = params.topic;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -78,23 +78,11 @@ app.post("/api/generate-thread", async (req, res) => {
     });
 
     const text = response.text || "";
-    const [mainContent, boosterPart] = text.split("===VIRAL_BOOSTER===");
-    
-    let tweets = (mainContent || "").split("\n").filter(line => line.match(/^\d+\//)).map(t => t.trim());
-    if (tweets.length === 0) {
-      tweets = (mainContent || "").split("\n\n").filter(t => t.trim().length > 0);
-    }
+    const tweets = text.split("---")
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
 
-    let booster: any = null;
-    if (boosterPart) {
-      const lines = boosterPart.trim().split('\n');
-      const hashtags = lines.find(l => l.includes('HASHTAG:'))?.split('HASHTAG:')[1]?.trim();
-      const bestTime = lines.find(l => l.includes('WAKTU POSTING TERBAIK:'))?.split('WAKTU POSTING TERBAIK:')[1]?.trim();
-      const hooks = lines.filter(l => l.match(/^\d\./)).map(l => l.replace(/^\d\.\s*/, '').trim());
-      booster = { hashtags, bestTime, hooks };
-    }
-
-    res.json({ tweets, booster });
+    res.json({ tweets, booster: null });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
@@ -140,7 +128,7 @@ app.get("/api/trending-topics", async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `Sebutkan 7 topik trending di Indonesia Maret 2026. Format: [emoji] Judul Topik.`;
+    const prompt = `Sebutkan 7 kategori produk yang lagi ramai dibahas di Threads Indonesia Maret 2026 (misal: Skincare, Gadget, Home Decor, dll). Format: [emoji] Nama Kategori.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
