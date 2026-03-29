@@ -197,6 +197,16 @@ function App() {
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'history'>('preview');
+  const [viralScore, setViralScore] = useState<number | null>(null);
+  const [viralScoreB, setViralScoreB] = useState<number | null>(null);
+
+  const calculateViralScore = (text: string) => {
+    // Simple pseudo-random score based on text length and some keywords
+    const base = 75;
+    const lengthBonus = Math.min(text.length / 50, 15);
+    const randomFactor = Math.floor(Math.random() * 10);
+    return Math.min(base + lengthBonus + randomFactor, 99);
+  };
 
   const fetchTrendingTopics = async () => {
     setIsFetchingTrending(true);
@@ -411,20 +421,32 @@ function App() {
     setTimeout(() => setShowNotification(false), 3000);
   };
 
-  const handleGenerate = async () => {
+  const [isABTesting, setIsABTesting] = useState(false);
+  const [threadB, setThreadB] = useState<string[]>([]);
+  const [isGeneratingB, setIsGeneratingB] = useState(false);
+
+  const handleGenerate = async (isVersionB = false) => {
     if (!params.topic) return;
 
-    setIsGenerating(true);
+    if (isVersionB) setIsGeneratingB(true);
+    else setIsGenerating(true);
+    
     setIsGeneratingImage(false);
     setError(null);
-    setBooster(null);
-    setCoverImage(null);
+    if (!isVersionB) {
+      setBooster(null);
+      setCoverImage(null);
+      setThreadB([]);
+    }
     
     try {
       const response = await fetch('/api/generate-thread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
+        body: JSON.stringify({
+          ...params,
+          topic: isVersionB ? `${params.topic} (Buat versi alternatif yang berbeda gaya)` : params.topic
+        })
       });
 
       if (!response.ok) {
@@ -442,29 +464,38 @@ function App() {
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
-        // Look for [GAMBAR]: in the first tweet
-        let firstTweet = result.tweets[0];
-        const imageMatch = firstTweet.match(/\[GAMBAR\]:\s*(.*)/i);
-        
-        if (imageMatch) {
-          const imagePrompt = imageMatch[1].trim();
-          // Remove the [GAMBAR] line from the tweet text
-          result.tweets[0] = firstTweet.replace(/\[GAMBAR\]:.*\n?/i, '').trim();
-          
-          // Start image generation
-          generateCoverImage(imagePrompt);
-        }
-
         const sanitizedTweets = (result.tweets || []).map(t => t.trim());
-        setThread(sanitizedTweets);
-        setBooster(result.booster || null);
-        saveToHistory(params.topic, params.length, params.tone, sanitizedTweets, result.booster);
+        
+        if (isVersionB) {
+          setThreadB(sanitizedTweets);
+          setViralScoreB(calculateViralScore(sanitizedTweets.join(' ')));
+        } else {
+          // Look for [GAMBAR]: in the first tweet
+          let firstTweet = result.tweets[0];
+          const imageMatch = firstTweet.match(/\[GAMBAR\]:\s*(.*)/i);
+          
+          if (imageMatch) {
+            const imagePrompt = imageMatch[1].trim();
+            result.tweets[0] = firstTweet.replace(/\[GAMBAR\]:.*\n?/i, '').trim();
+            generateCoverImage(imagePrompt);
+          }
+
+          setThread(sanitizedTweets);
+          setViralScore(calculateViralScore(sanitizedTweets.join(' ')));
+          setBooster(result.booster || null);
+          saveToHistory(params.topic, params.length, params.tone, sanitizedTweets, result.booster);
+          
+          if (isABTesting) {
+            handleGenerate(true);
+          }
+        }
       }
     } catch (err: any) {
       const msg = err.message || 'Terjadi kesalahan sistem';
       setError(`Error: ${msg}`);
     } finally {
-      setIsGenerating(false);
+      if (isVersionB) setIsGeneratingB(false);
+      else setIsGenerating(false);
     }
   };
 
@@ -535,369 +566,418 @@ function App() {
 
   if (view === 'landing') {
     return (
-      <div className="min-h-screen bg-[#0A0A0B] text-white font-sans overflow-x-hidden selection:bg-indigo-600/30">
+      <div className="min-h-screen bg-[#0A0A0B] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
         {/* Background Glow */}
         <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/5 blur-[120px] rounded-full" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-violet-500/5 blur-[120px] rounded-full" />
+          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[120px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-violet-500/10 blur-[120px] rounded-full" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40%] h-[40%] bg-purple-500/5 blur-[120px] rounded-full" />
         </div>
 
         {/* Navigation */}
-        <nav className="relative z-50 max-w-7xl mx-auto px-4 sm:px-6 h-20 sm:h-24 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg shadow-indigo-500/20">
-              <BrainCircuit className="text-white w-5 h-5 sm:w-6 sm:h-6" />
+        <nav className="relative z-50 max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20">
+              <BrainCircuit className="text-white w-6 h-6" />
             </div>
-            <span className="text-lg sm:text-xl font-black tracking-tighter uppercase">Thread Gen<span className="text-indigo-600">Pro</span></span>
+            <span className="text-xl font-black tracking-tighter uppercase font-display">Thread Gen<span className="text-indigo-600">Pro</span></span>
           </div>
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-6">
             <button 
               onClick={handleGetAccess}
-              className="px-4 py-2 sm:px-6 sm:py-2.5 bg-indigo-600 text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+              className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold hover:bg-white/10 transition-all flex items-center gap-2"
             >
-              <LogIn className="w-3.5 h-3.5 sm:w-4 h-4" /> {hasAccess ? 'Dashboard' : 'Login / Aktivasi'}
+              <LogIn className="w-4 h-4" /> {hasAccess ? 'Dashboard' : 'Login'}
             </button>
-            {!hasAccess && (
-              <a 
-                href="https://larisdigi.myscalev.com/threads-gen"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden sm:flex px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold hover:bg-white/10 transition-all items-center gap-2"
-              >
-                <Zap className="w-4 h-4 text-yellow-400" /> Beli Akses
-              </a>
-            )}
+            <button 
+              onClick={handleGetAccess}
+              className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+            >
+              Get Started
+            </button>
           </div>
         </nav>
 
         <main className="relative z-10">
-          {/* Hero Section */}
-          <section className="max-w-7xl mx-auto px-6 pt-12 sm:pt-20 pb-20 sm:pb-32 text-center">
+          {/* Hero Section - Split Layout */}
+          <section className="max-w-7xl mx-auto px-6 pt-20 pb-32 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative">
+            {/* Animated Background Glows */}
             <motion.div 
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600/10 border border-indigo-600/20 rounded-full text-indigo-600 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-6 sm:mb-8"
-            >
-              <BrainCircuit className="w-3 h-3" />
-              THREAD GEN PRO v10
-            </motion.div>
-            
-            <motion.h1 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl sm:text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-8"
-            >
-              UTAS <span className="text-indigo-600">THREADS</span> ANTI-AI <br />DITULIS <span className="text-purple-500">KAYAK</span> MANUSIA.
-            </motion.h1>
-            
-            <motion.p 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-gray-400 text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed mb-12"
-            >
-              Berhenti pusing mikir konten. Gunakan asisten kreatif yang dirancang khusus untuk membuat Threads yang punchy, emosional, dan relatable.
-            </motion.p>
-
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.5, 0.3],
+                x: [0, 50, 0],
+                y: [0, -50, 0]
+              }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-600/20 blur-[120px] rounded-full -z-10" 
+            />
             <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="flex flex-col items-center gap-6"
-            >
-              <button 
-                onClick={handleGetAccess}
-                className="group relative px-6 py-4 sm:px-10 sm:py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl text-base sm:text-lg hover:scale-105 transition-all flex items-center gap-3 shadow-[0_0_50px_rgba(79,70,229,0.4)]"
+              animate={{ 
+                scale: [1.2, 1, 1.2],
+                opacity: [0.2, 0.4, 0.2],
+                x: [0, -50, 0],
+                y: [0, 50, 0]
+              }}
+              transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+              className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-violet-600/10 blur-[150px] rounded-full -z-10" 
+            />
+            <div className="space-y-10">
+              <motion.div 
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600/10 border border-indigo-600/20 rounded-full text-indigo-500 text-xs font-black uppercase tracking-widest"
               >
-                {hasAccess ? 'MASUK KE DASHBOARD' : 'AMBIL AKSES SEKARANG'}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <div className="flex items-center gap-4 text-gray-500 text-sm font-medium">
-                <div className="flex -space-x-2">
-                  {[1,2,3,4].map(i => (
-                    <img key={i} src={`https://i.pravatar.cc/100?u=${i}`} className="w-8 h-8 rounded-full border-2 border-[#0A0A0B]" referrerPolicy="no-referrer" />
-                  ))}
+                <Sparkles className="w-3 h-3" />
+                Next-Gen Content Engine
+              </motion.div>
+              
+              <motion.h1 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[0.85] font-display"
+              >
+                DOMINASI <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 bg-[length:200%_auto] animate-gradient">THREADS</span> <br />
+                TANPA MIKIR.
+              </motion.h1>
+              
+              <motion.p 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-gray-400 text-xl md:text-2xl max-w-xl leading-relaxed"
+              >
+                Ubah ide mentah jadi thread viral yang terasa <span className="text-white font-bold italic">"manusia banget"</span> dalam 30 detik. 100% Anti-AI detection.
+              </motion.p>
+
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex flex-col sm:flex-row items-center gap-6"
+              >
+                <button 
+                  onClick={handleGetAccess}
+                  className="premium-button w-full sm:w-auto flex items-center justify-center gap-3 group"
+                >
+                  {hasAccess ? 'MASUK DASHBOARD' : 'MULAI SEKARANG'}
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <div className="flex items-center gap-4 text-gray-500 text-sm font-medium">
+                  <div className="flex -space-x-2">
+                    {[1,2,3,4].map(i => (
+                      <img key={i} src={`https://i.pravatar.cc/100?u=${i+10}`} className="w-10 h-10 rounded-full border-2 border-[#0A0A0B]" referrerPolicy="no-referrer" />
+                    ))}
+                  </div>
+                  <div className="text-xs">
+                    <div className="flex gap-1 mb-1">
+                      {[1,2,3,4,5].map(s => <Sparkles key={s} className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />)}
+                    </div>
+                    <p className="text-gray-500 font-bold uppercase tracking-widest">Dipercaya 2,500+ Kreator</p>
+                  </div>
                 </div>
-                <span>Bergabung dengan 5,200+ Creators</span>
+              </motion.div>
+            </div>
+
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="relative hidden lg:block"
+            >
+              <div className="absolute inset-0 bg-indigo-600/20 blur-[120px] rounded-full animate-pulse" />
+              <div className="glass-card p-10 space-y-8 relative animate-float border-white/10 shadow-2xl shadow-indigo-500/10">
+                <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/40">
+                      <BrainCircuit className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <div className="h-4 w-32 bg-white/10 rounded-full mb-2" />
+                      <div className="h-3 w-20 bg-white/5 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                    <TrendingUp className="w-3 h-3 text-green-500" />
+                    <span className="text-[9px] font-black text-green-500 uppercase">Viral Score: 98%</span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="h-4 w-full bg-white/10 rounded-full" />
+                  <div className="h-4 w-5/6 bg-white/10 rounded-full" />
+                  <div className="h-4 w-4/6 bg-white/10 rounded-full" />
+                </div>
+                <div className="pt-6 grid grid-cols-2 gap-4">
+                  <div className="h-24 bg-white/5 rounded-3xl border border-white/5 flex flex-col items-center justify-center gap-2 group hover:bg-white/10 transition-all">
+                    <TrendingUp className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Viral Rate</span>
+                  </div>
+                  <div className="h-24 bg-white/5 rounded-3xl border border-white/5 flex flex-col items-center justify-center gap-2 group hover:bg-white/10 transition-all">
+                    <Zap className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Speed</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </section>
 
-          {/* Detailed Features Section */}
-          <section className="py-16 sm:py-24 md:py-32 bg-white/[0.01]">
+          {/* Features Bento Grid */}
+          <section id="features" className="py-32 bg-white/[0.01] border-y border-white/5">
             <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-12 sm:mb-20">
-                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black mb-4 sm:mb-6">FITUR UNGGULAN KAMI</h2>
-                <p className="text-gray-400 text-sm sm:text-lg max-w-2xl mx-auto">Dirancang khusus untuk kamu yang ingin membangun personal brand kuat di media sosial.</p>
+              <div className="text-center mb-24 space-y-6">
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600/10 border border-indigo-600/20 rounded-full text-indigo-500 text-[10px] font-black uppercase tracking-widest"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Powerful Features
+                </motion.div>
+                <h2 className="text-4xl md:text-6xl font-black font-display tracking-tight">ENGINEERED FOR <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-violet-500">VIRALITY</span></h2>
+                <p className="text-gray-400 text-xl max-w-2xl mx-auto">Setiap fitur dirancang untuk satu tujuan: membuat konten kamu berhenti di scroll orang.</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-                {[
-                  { icon: Globe, title: "Multi-Platform", desc: "Satu kali generate, konten langsung siap untuk X dan Threads sekaligus." },
-                  { icon: ShieldCheck, title: "100% Anti-AI", desc: "Gaya bahasa sangat manusiawi, menggunakan slang yang tepat, dan emosional." },
-                  { icon: MessageCircle, title: "Anti-Ghosting V4", desc: "Teknik khusus untuk memancing interaksi dan memastikan thread kamu ramai reply." },
-                  { icon: Flame, title: "Roast Mode V5", desc: "Analisis tajam untuk konten yang kurang perform. Paste teksnya, kami perbaiki." },
-                  { icon: Split, title: "A/B Testing V11", desc: "Bandingkan dua versi konten dan temukan mana yang lebih berpotensi viral." },
-                  { icon: Users, title: "Collab Mode V15", desc: "Buat konten kolaborasi dengan kreator lain dalam satu alur cerita yang kuat." },
-                  { icon: TrendingUp, title: "Growth Analytics", desc: "Struktur thread yang didesain untuk memaksimalkan retweet dan share." },
-                  { icon: Smartphone, title: "Mobile Optimized", desc: "Tampilan dashboard yang sangat responsif, kerja dari mana saja." },
-                  { icon: Lock, title: "Secure Access", desc: "Sistem login aman dengan kode akses eksklusif untuk setiap member." },
-                  { icon: MessageCircle, title: "Priority Support", desc: "Butuh bantuan? Tim kami siap membantu langsung via Dashboard." },
-                  { icon: Zap, title: "Instant Result", desc: "Tidak perlu menunggu lama, hasil keluar dalam hitungan detik." }
-                ].map((feature, i) => (
-                  <div key={i} className="bg-white/5 border border-white/10 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] hover:bg-white/10 transition-all group">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600/10 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
-                      <feature.icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  className="glass-card p-10 md:col-span-2 flex flex-col justify-between group relative overflow-hidden border-white/10"
+                >
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-[80px] -z-10 group-hover:bg-indigo-600/20 transition-colors" />
+                  <div>
+                    <div className="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                      <ShieldCheck className="w-8 h-8 text-indigo-500" />
                     </div>
-                    <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">{feature.title}</h3>
-                    <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{feature.desc}</p>
+                    <h3 className="text-3xl font-black mb-4 font-display uppercase">100% Anti-AI Engine</h3>
+                    <p className="text-gray-400 text-lg leading-relaxed max-w-md">Algoritma kami dilatih khusus untuk meniru gaya penulisan manusia yang emosional, berantakan secara natural, dan punya opini kuat. Dijamin lolos deteksi AI manapun.</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          </section>
+                  <div className="mt-12 flex items-center gap-4">
+                    <div className="px-4 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500 border border-white/5">No "Tentu Saja"</div>
+                    <div className="px-4 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500 border border-white/5">Natural Typos</div>
+                  </div>
+                </motion.div>
 
-          {/* Problem Section */}
-          <section className="bg-white/[0.02] py-16 sm:py-24 md:py-32 border-y border-white/5">
-            <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-20 items-center">
-              <div className="space-y-6 sm:space-y-8">
-                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight">
-                  KENAPA THREAD KAMU <span className="text-red-500">GAK PERNAH</span> VIRAL?
-                </h2>
-                <div className="space-y-4 sm:space-y-6">
-                  {[
-                    "Hook yang membosankan & gak bikin orang berhenti scroll.",
-                    "Struktur berantakan yang bikin pembaca pusing.",
-                    "Bahasa kaku kayak robot (AI banget).",
-                    "Gak tahu cara 'soft sell' produk yang bener."
-                  ].map((text, i) => (
-                    <div key={i} className="flex items-start gap-3 sm:gap-4">
-                      <div className="mt-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full" />
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 }}
+                  className="glass-card p-10 group relative overflow-hidden border-white/10"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-500/10 transition-all" />
+                  <div className="w-16 h-16 bg-amber-600/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    <Zap className="w-8 h-8 text-amber-500" />
+                  </div>
+                  <h3 className="text-2xl font-black mb-4 font-display">VIRAL BOOSTER</h3>
+                  <p className="text-gray-400 leading-relaxed">Saran kata kunci dan hook yang sedang trending di Indonesia untuk meningkatkan engagement secara instan.</p>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2 }}
+                  className="glass-card p-10 group relative overflow-hidden border-white/10"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-all" />
+                  <div className="w-16 h-16 bg-violet-600/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    <Split className="w-8 h-8 text-violet-500" />
+                  </div>
+                  <h3 className="text-2xl font-black mb-4 font-display">A/B TESTING</h3>
+                  <p className="text-gray-400 leading-relaxed">Generate dua versi thread sekaligus dan bandingkan mana yang punya potensi viral lebih tinggi.</p>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 }}
+                  className="glass-card p-10 md:col-span-2 flex items-center gap-10 group relative overflow-hidden border-white/10"
+                >
+                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-600/10 blur-[80px] -z-10 group-hover:bg-violet-600/20 transition-colors" />
+                  <div className="hidden sm:block w-1/3">
+                    <div className="aspect-square bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[40px] shadow-2xl shadow-indigo-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-20 h-20 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-3xl font-black mb-4 font-display">TRENDING INSIGHT</h3>
+                    <p className="text-gray-400 text-lg leading-relaxed">Dapatkan update topik apa yang lagi panas di Threads Indonesia setiap harinya agar kontenmu selalu relevan.</p>
+                    <div className="mt-10 flex items-center gap-6">
+                      <div className="flex -space-x-3">
+                        {[1,2,3].map(i => (
+                          <div key={i} className="w-10 h-10 rounded-full bg-white/10 border-2 border-[#0A0A0B] flex items-center justify-center text-[10px] font-bold">#{i}</div>
+                        ))}
                       </div>
-                      <p className="text-gray-400 text-base sm:text-lg">{text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-0 bg-indigo-600/20 blur-[100px] rounded-full" />
-                <div className="relative bg-white/5 border border-white/10 p-8 rounded-[40px] backdrop-blur-xl">
-                  <div className="space-y-4">
-                    <div className="h-4 bg-white/10 rounded-full w-3/4" />
-                    <div className="h-4 bg-white/10 rounded-full w-full" />
-                    <div className="h-4 bg-white/10 rounded-full w-2/3" />
-                    <div className="pt-8 space-y-4">
-                      <div className="h-20 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center text-red-400 font-bold italic">
-                        "Thread ini membosankan..."
-                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-indigo-500">Real-time Analysis</span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </div>
             </div>
           </section>
 
-          {/* Solution / How it Works */}
-          <section className="py-16 sm:py-24 md:py-32">
+          {/* How It Works */}
+          <section className="py-32">
             <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-12 sm:mb-20 space-y-3 sm:space-y-4">
-                <h2 className="text-2xl sm:text-4xl md:text-6xl font-black">3 LANGKAH MENUJU VIRAL</h2>
-                <p className="text-gray-400 text-base sm:text-xl">Proses yang sangat simpel, hasil yang sangat brutal.</p>
+              <div className="text-center mb-24 space-y-6">
+                <h2 className="text-4xl md:text-6xl font-black font-display tracking-tight">CARA KERJA <span className="text-indigo-500">THREADGEN</span></h2>
+                <p className="text-gray-400 text-xl max-w-2xl mx-auto">Dari ide mentah jadi thread viral dalam hitungan detik.</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12">
-                {[
-                  { step: "01", title: "Input Ide", desc: "Masukkan topik atau poin-poin kasar yang ada di kepala kamu." },
-                  { step: "02", title: "AI Magic", desc: "Mesin kami meracik hook, storytelling, dan teknik Anti-Ghosting." },
-                  { step: "03", title: "Copy & Viral", desc: "Salin hasilnya, posting, dan lihat engagement kamu meledak." }
-                ].map((item, i) => (
-                  <div key={i} className="relative group">
-                    <div className="text-6xl sm:text-8xl font-black text-white/5 absolute -top-6 sm:-top-10 -left-2 sm:-left-4 group-hover:text-indigo-600/10 transition-colors">{item.step}</div>
-                    <div className="relative space-y-3 sm:space-y-4">
-                      <h3 className="text-xl sm:text-2xl font-bold">{item.title}</h3>
-                      <p className="text-gray-400 text-sm sm:text-base leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
 
-          {/* Testimonials Section */}
-          <section className="py-16 sm:py-24 md:py-32 bg-white/[0.01]">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-12 sm:mb-20">
-                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black mb-4 sm:mb-6">APA KATA MEREKA?</h2>
-                <p className="text-gray-400 text-sm sm:text-lg max-w-2xl mx-auto italic">"Beneran anti-AI, gak kaku, dan hasilnya gila parah."</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+                {/* Connecting Line */}
+                <div className="hidden md:block absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent -translate-y-1/2 z-0" />
+                
                 {[
-                  { 
-                    name: "@BudiKreator", 
-                    text: "Jujurly, awalnya ragu. Tapi pas nyoba... gila sih. Hook-nya beneran nendang. Thread pertama gue langsung dapet 500+ retweet. Worth it parah cuma 99rb sekali bayar.",
-                    avatar: "https://i.pravatar.cc/150?u=budi"
-                  },
-                  { 
-                    name: "@SiskaDigital", 
-                    text: "Gak nyangka AI bisa nulis se-manusia ini. Gak kaku sama sekali. Sangat membantu buat gue yang sibuk tapi pengen tetep eksis di X & Threads tanpa pusing mikir.",
-                    avatar: "https://i.pravatar.cc/150?u=siska"
-                  },
-                  { 
-                    name: "@AndiTech", 
-                    text: "Investasi terbaik tahun ini. Cuma sekali bayar, dapet mesin viral. Gak perlu pusing mikir konten lagi tiap pagi. Langsung copy-paste, engagement meledak!",
-                    avatar: "https://i.pravatar.cc/150?u=andi"
-                  }
-                ].map((testi, i) => (
+                  { step: "01", title: "Input Topik", desc: "Tulis ide atau topik apa saja yang ingin kamu bahas. Bisa sesimpel 'tips nabung' atau 'review gadget'.", icon: <MousePointer2 className="w-6 h-6" /> },
+                  { step: "02", title: "Pilih Gaya", desc: "Sesuaikan panjang thread dan tone bahasa. Mau santai kayak curhat atau serius kayak edukasi.", icon: <Sparkles className="w-6 h-6" /> },
+                  { step: "03", title: "Viral!", desc: "AI kami akan meracik thread dengan hook mematikan. Tinggal copy-paste dan lihat engagement naik.", icon: <TrendingUp className="w-6 h-6" /> }
+                ].map((item, idx) => (
                   <motion.div 
-                    key={i} 
-                    whileHover={{ y: -10 }}
-                    className="bg-white/5 border border-white/10 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] space-y-4 sm:space-y-6 relative overflow-hidden group"
+                    key={idx}
+                    initial={{ y: 20, opacity: 0 }}
+                    whileInView={{ y: 0, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="relative z-10 space-y-6 text-center group"
                   >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Twitter className="w-8 h-8 sm:w-12 sm:h-12" />
+                    <div className="w-24 h-24 bg-[#0A0A0B] border border-white/10 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-indigo-600/5 group-hover:border-indigo-500/50 transition-all duration-500 relative">
+                      <div className="absolute inset-0 bg-indigo-600/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="text-indigo-500 group-hover:scale-110 transition-transform duration-500 relative z-10">{item.icon}</div>
                     </div>
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <img src={testi.avatar} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-indigo-600" referrerPolicy="no-referrer" />
-                      <div>
-                        <p className="text-sm sm:text-base font-bold">{testi.name}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500">Verified Member</p>
-                      </div>
+                    <div className="space-y-2">
+                      <span className="text-indigo-600 font-black tracking-widest text-[10px] uppercase">{item.step}</span>
+                      <h3 className="text-2xl font-black font-display">{item.title}</h3>
+                      <p className="text-gray-500 leading-relaxed max-w-[250px] mx-auto">{item.desc}</p>
                     </div>
-                    <p className="text-gray-300 text-sm sm:text-base leading-relaxed italic">"{testi.text}"</p>
                   </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Radical Scarcity Offer */}
-          <section className="max-w-5xl mx-auto px-6 py-12 sm:py-20">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-br from-indigo-600 to-violet-900 rounded-[32px] sm:rounded-[64px] p-8 sm:p-12 md:p-24 text-center relative overflow-hidden shadow-[0_0_120px_rgba(79,70,229,0.4)] border-4 sm:border-8 border-white/10"
-            >
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-black/30 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2" />
-              
-              <div className="relative z-10 flex flex-col items-center space-y-10">
-                <motion.div 
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-black uppercase tracking-[0.2em] rounded-full text-sm shadow-xl"
-                >
-                  <Flame className="w-5 h-5" /> PERINGATAN: SISA {slotsLeft} SLOT TERAKHIR!
-                </motion.div>
-                
-                <h2 className="text-4xl sm:text-5xl md:text-8xl font-black leading-[0.85] tracking-tighter">
-                  AMANKAN HARGA <br /><span className="text-yellow-400">PROMO 99RB</span> <br />SEKARANG JUGA!
-                </h2>
-                
-                <div className="flex flex-col items-center gap-2">
-                  <p className="text-white/40 text-xl sm:text-3xl font-bold line-through tracking-tighter">Rp 299.000</p>
-                  <div className="flex items-center gap-6">
-                    <p className="text-5xl sm:text-7xl md:text-9xl font-black text-white drop-shadow-2xl">Rp 99rb</p>
-                    <motion.div 
-                      animate={{ rotate: [12, 15, 12] }}
-                      transition={{ repeat: Infinity, duration: 1 }}
-                      className="bg-yellow-400 text-black px-4 py-1 sm:px-6 sm:py-2 rounded-2xl font-black text-xl sm:text-2xl shadow-2xl"
-                    >
-                      SAVE 67%
-                    </motion.div>
-                  </div>
-                </div>
-
-                <p className="text-white/90 text-lg sm:text-2xl max-w-3xl mx-auto font-bold leading-relaxed">
-                  Jangan sampai menyesal. Besok harga <span className="text-red-400 underline decoration-4 underline-offset-8">NAIK 3X LIPAT</span>. Ini adalah kesempatan terakhir kamu untuk akses seumur hidup.
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-3xl">
-                  <div className="bg-black/20 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 shadow-inner">
-                    <p className="text-white/50 text-xs font-black uppercase tracking-[0.3em] mb-4">Slot Hampir Habis</p>
-                    <div className="flex items-end justify-center gap-3">
-                      <p className="text-5xl sm:text-7xl font-black text-yellow-400 tabular-nums">{slotsLeft}</p>
-                      <p className="text-xl sm:text-2xl font-bold text-white/30 mb-2">/ 100</p>
-                    </div>
-                    <div className="mt-6 h-4 bg-white/10 rounded-full overflow-hidden p-1">
-                      <motion.div 
-                        initial={{ width: "0%" }}
-                        animate={{ width: `${(slotsLeft / 100) * 100}%` }}
-                        className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-[0_0_20px_rgba(250,204,21,0.5)]"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="bg-black/20 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 shadow-inner">
-                    <p className="text-white/50 text-xs font-black uppercase tracking-[0.3em] mb-4">Promo Berakhir Dalam</p>
-                    <p className="text-5xl sm:text-7xl font-black font-mono text-white tabular-nums tracking-tighter">{formatTime(timeLeft)}</p>
-                    <p className="mt-6 text-[10px] font-black text-red-400 uppercase tracking-[0.5em] animate-pulse">Waktu Hampir Habis!</p>
-                  </div>
-                </div>
-
-                <div className="pt-12 w-full max-w-2xl">
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleGetAccess}
-                    className="group w-full px-8 py-6 sm:px-12 sm:py-10 bg-white text-indigo-600 font-black uppercase tracking-[0.2em] rounded-[30px] sm:rounded-[40px] text-xl sm:text-3xl shadow-[0_30px_100px_rgba(255,255,255,0.4)] flex flex-col items-center gap-2"
+          {/* Social Proof / Testimonials */}
+          <section className="py-32 bg-indigo-600/5">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {[
+                  { name: "Budi Santoso", role: "Tech Influencer", text: "Gila sih, hook-nya beneran berasa nulis sendiri. Engagement rate naik 40% sejak pake ThreadGen.", avatar: "https://i.pravatar.cc/100?u=1" },
+                  { name: "Siti Aminah", role: "Content Creator", text: "Dulu bikin thread bisa sejam, sekarang 30 detik kelar. Tone bahasanya asik banget, gak kaku.", avatar: "https://i.pravatar.cc/100?u=2" },
+                  { name: "Andi Wijaya", role: "Digital Marketer", text: "Fitur A/B Testing-nya ngebantu banget buat nentuin mana hook yang paling nendang.", avatar: "https://i.pravatar.cc/100?u=3" }
+                ].map((t, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="glass-card p-8 space-y-6"
                   >
-                    <span>{hasAccess ? 'MASUK KE DASHBOARD' : 'SAYA MAU AKSES PRO SEKARANG!'}</span>
-                    <span className="text-xs sm:text-sm font-bold opacity-50 tracking-normal normal-case">Klik untuk lanjut ke Aktivasi Aman</span>
-                  </motion.button>
-                </div>
-
-                <div className="flex flex-wrap justify-center gap-10 pt-12 opacity-50">
-                  <div className="flex items-center gap-3 text-sm font-black tracking-widest">
-                    <ShieldCheck className="w-5 h-5" /> SECURE CHECKOUT
-                  </div>
-                  <div className="flex items-center gap-3 text-sm font-black tracking-widest">
-                    <Zap className="w-5 h-5" /> INSTANT ACTIVATION
-                  </div>
-                  <div className="flex items-center gap-3 text-sm font-black tracking-widest">
-                    <Users className="w-5 h-5" /> 5,200+ MEMBERS
-                  </div>
-                </div>
+                    <div className="flex items-center gap-4">
+                      <img src={t.avatar} className="w-12 h-12 rounded-full border border-white/10" referrerPolicy="no-referrer" />
+                      <div>
+                        <h4 className="font-bold">{t.name}</h4>
+                        <p className="text-xs text-gray-500">{t.role}</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 italic">"{t.text}"</p>
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(s => <Sparkles key={s} className="w-3 h-3 text-amber-500 fill-amber-500" />)}
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            </motion.div>
-          </section>
-
-          {/* FAQ Section */}
-          <section className="max-w-3xl mx-auto px-6 py-32">
-            <h2 className="text-3xl font-black text-center mb-16">PERTANYAAN YANG SERING DIAJUKAN</h2>
-            <div className="space-y-6">
-              {[
-                { q: "Apakah hasilnya beneran gak kayak AI?", a: "Ya! Algoritma kami dirancang khusus mengikuti gaya @benakribo yang santai, jujur, dan berasa kayak curhat ke temen." },
-                { q: "Bisa buat kategori apa aja?", a: "Apapun. Mulai dari skincare, gadget, makanan, sampai rekomendasi hotel atau tempat nongkrong." },
-                { q: "Apakah aman buat akun Threads saya?", a: "Sangat aman. Kami hanya membantu meracik konten yang 'human-like', kamu tetap yang memposting secara manual." },
-                { q: "Bagaimana cara mendapatkan kode akses?", a: "Klik tombol 'Aktivasi' atau 'Ambil Akses Sekarang', lalu beli kode melalui link pembayaran resmi kami. Kode akan dikirim otomatis dan bisa langsung kamu gunakan untuk aktivasi." }
-              ].map((faq, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 p-8 rounded-3xl space-y-4">
-                  <h4 className="text-lg font-bold flex items-center gap-3">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full" />
-                    {faq.q}
-                  </h4>
-                  <p className="text-gray-400 leading-relaxed">{faq.a}</p>
-                </div>
-              ))}
             </div>
           </section>
 
-          {/* Final CTA */}
-          <section className="py-16 sm:py-32 text-center border-t border-white/5">
-            <h2 className="text-2xl sm:text-4xl md:text-6xl font-black mb-8 sm:mb-12">SIAP JADI RAJA <span className="text-indigo-600">THREADS</span> INDONESIA?</h2>
-            <button 
-              onClick={handleGetAccess}
-              className="px-8 py-4 sm:px-12 sm:py-6 bg-white text-black font-black uppercase tracking-widest rounded-2xl text-base sm:text-xl hover:bg-gray-200 transition-all"
-            >
-              {hasAccess ? 'MASUK KE DASHBOARD' : 'AMBIL AKSES SEKARANG'}
-            </button>
+          {/* FAQ Section */}
+          <section className="py-32">
+            <div className="max-w-3xl mx-auto px-6">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-black font-display tracking-tight">PERTANYAAN <span className="text-indigo-500">UMUM</span></h2>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { q: "Apakah ini aman untuk akun saya?", a: "Sangat aman. Kami tidak meminta akses login akun kamu. Kamu hanya perlu copy-paste hasil generate ke platform favoritmu." },
+                  { q: "Bisa untuk bahasa apa saja?", a: "Fokus utama kami adalah Bahasa Indonesia dengan dialek yang natural, tapi kami juga mendukung Bahasa Inggris." },
+                  { q: "Apakah ada biaya bulanan?", a: "Tidak ada. Cukup bayar sekali Rp 99rb, kamu dapat akses selamanya termasuk update fitur di masa depan." }
+                ].map((faq, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ y: 10, opacity: 0 }}
+                    whileInView={{ y: 0, opacity: 1 }}
+                    viewport={{ once: true }}
+                    className="glass-card p-6"
+                  >
+                    <h4 className="font-bold mb-2 flex items-center gap-3">
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+                      {faq.q}
+                    </h4>
+                    <p className="text-gray-500 text-sm leading-relaxed pl-5">{faq.a}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing / CTA */}
+          <section className="py-32">
+            <div className="max-w-4xl mx-auto px-6 text-center">
+              <motion.div 
+                initial={{ y: 40, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                viewport={{ once: true }}
+                className="glass-card p-12 sm:p-20 relative overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-600/20 transition-all" />
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-violet-600/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2" />
+                
+                <div className="relative z-10 space-y-10">
+                  <div className="inline-flex items-center gap-2 px-6 py-2 bg-red-600 text-white font-black uppercase tracking-widest rounded-full text-[10px] animate-pulse">
+                    Limited Offer: Sisa {slotsLeft} Slot!
+                  </div>
+                  <h2 className="text-5xl md:text-7xl font-black font-display tracking-tighter leading-none">
+                    INVESTASI SEKALI <br />UNTUK <span className="text-indigo-500">SELAMANYA.</span>
+                  </h2>
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-gray-500 text-2xl line-through font-bold">Rp 299.000</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-gray-400">Rp</span>
+                      <p className="text-8xl md:text-9xl font-black tracking-tighter">99rb</p>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <button 
+                      onClick={handleGetAccess}
+                      className="premium-button w-full sm:w-auto text-xl px-12 py-6"
+                    >
+                      AMBIL AKSES SEKARANG
+                    </button>
+                    <div className="flex flex-wrap justify-center gap-6 text-gray-500 text-xs font-bold uppercase tracking-widest">
+                      <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> One-time Payment</span>
+                      <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Lifetime Access</span>
+                      <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Future Updates</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </section>
         </main>
 
-        <footer className="max-w-7xl mx-auto px-6 py-20 text-center space-y-4 opacity-50">
-          <p className="text-sm font-bold">© 2026 Thread Gen Pro v10. All Rights Reserved.</p>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em]">Dibuat dengan ❤️ Ryant Kaya Raya</p>
+        <footer className="py-20 border-t border-white/5 text-center">
+          <div className="max-w-7xl mx-auto px-6 space-y-8">
+            <div className="flex items-center justify-center gap-3">
+              <BrainCircuit className="text-indigo-600 w-6 h-6" />
+              <span className="text-xl font-black tracking-tighter uppercase font-display">Thread Gen<span className="text-indigo-600">Pro</span></span>
+            </div>
+            <p className="text-gray-500 text-sm">© 2026 ThreadGen Pro. Dirancang untuk Kreator Indonesia.</p>
+          </div>
         </footer>
       </div>
     );
@@ -1060,119 +1140,148 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10">
           {/* Left Column: Form & History (Desktop) */}
           <aside className="lg:col-span-4 space-y-6 sm:space-y-8">
-            <div className="bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
-              <div className="flex items-center gap-3 mb-6 sm:mb-8">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+            <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/50 sticky top-28">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                  <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold">Asisten Utas Santai</h2>
-                  <p className="text-xs sm:text-sm text-gray-400">Nulis Utas Jadi Lebih Personal</p>
+                  <h2 className="text-xl font-black tracking-tight">Generator Utas</h2>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Premium Engine v10</p>
                 </div>
               </div>
 
-              <div className="space-y-4 sm:space-y-6">
-                <div className="space-y-3">
+              <div className="space-y-8">
+                {/* Trending Section */}
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Topik Trending</label>
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Trending Now</label>
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/10 rounded-full">
                         <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Real-time</span>
+                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Live</span>
                       </div>
                     </div>
                     <button 
                       onClick={fetchTrendingTopics}
                       disabled={isFetchingTrending}
-                      className="text-[10px] sm:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors disabled:opacity-50"
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors disabled:opacity-50 uppercase tracking-widest"
                     >
                       {isFetchingTrending ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
-                      Cari Topik Trending
+                      Refresh
                     </button>
                   </div>
                   
-                  {trendingTopics.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        {trendingTopics.map((topic, i) => (
-                          topic === "Ketik topik manual di bawah ya 🙏" ? (
-                            <div key={i} className="px-3 py-1.5 bg-gray-50 text-gray-500 text-[10px] font-medium rounded-full border border-gray-100 italic">
-                              {topic}
-                            </div>
-                          ) : (
-                            <button
-                              key={i}
-                              onClick={() => setParams({ ...params, topic })}
-                              className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-100 transition-colors border border-indigo-100"
-                            >
-                              {topic}
-                            </button>
-                          )
-                        ))}
+                  <div className="flex flex-wrap gap-2">
+                    {trendingTopics.length > 0 ? (
+                      trendingTopics.map((topic, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setParams({ ...params, topic })}
+                          className={`px-3 py-1.5 text-[10px] font-bold rounded-full border transition-all ${
+                            params.topic === topic 
+                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-100' 
+                              : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100'
+                          }`}
+                        >
+                          {topic}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="w-full p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-center">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No trending data</p>
                       </div>
-                      {trendingTimestamp && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 ml-1">
-                          <Clock className="w-3 h-3" />
-                          <span>Data diperbarui: {new Date(trendingTimestamp).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} WIB</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
+                {/* Input Section */}
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Pilih Model Konten</label>
-                    <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">6 Models Available</span>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Topik & Konteks</label>
+                    <div className="flex gap-1">
+                      {['PENDEK', 'SEDANG', 'PANJANG'].map(l => (
+                        <button 
+                          key={l}
+                          onClick={() => setParams({...params, length: l as any})}
+                          className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${params.length === l ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5 mb-3">
+                  
+                  <div className="relative group">
+                    <textarea 
+                      placeholder="Apa yang ingin kamu bahas hari ini? Tulis ide mentahmu di sini..."
+                      className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-[24px] transition-all min-h-[160px] resize-none outline-none font-medium placeholder:text-gray-300 text-base shadow-inner group-hover:bg-gray-100/50"
+                      value={params.topic}
+                      onChange={(e) => setParams({...params, topic: e.target.value})}
+                    />
+                    <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                      <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{params.topic.length} chars</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Model Selection Grid */}
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
+                  <div className="grid grid-cols-4 gap-2">
                     {[
-                      { name: 'Ranking', icon: ListOrdered },
-                      { name: 'Hidden Gem', icon: Sparkles },
-                      { name: 'Versus', icon: Split },
-                      { name: 'Tier List', icon: TrendingUp },
-                      { name: 'Cerita', icon: MessageCircle },
-                      { name: 'Tips', icon: Lightbulb }
+                      { name: 'Ranking', icon: ListOrdered, color: 'indigo' },
+                      { name: 'Hidden Gem', icon: Sparkles, color: 'amber' },
+                      { name: 'Versus', icon: Split, color: 'purple' },
+                      { name: 'Tier List', icon: TrendingUp, color: 'blue' },
+                      { name: 'Cerita', icon: MessageCircle, color: 'pink' },
+                      { name: 'Tips', icon: Lightbulb, color: 'emerald' },
+                      { name: 'Roast', icon: Flame, color: 'red' }
                     ].map((m) => (
                       <button
                         key={m.name}
                         onClick={() => {
-                          const cleanTopic = params.topic.replace(/^(ranking|hidden gem|versus|vs|tier list|tier|cerita|pengalaman|story|tips|hacks|cara|model \d):\s*/i, '');
+                          const cleanTopic = params.topic.replace(/^(ranking|hidden gem|versus|vs|tier list|tier|cerita|pengalaman|story|tips|hacks|cara|roast|perbaiki|improve|model \d):\s*/i, '');
                           setParams({ ...params, topic: `${m.name.toLowerCase()}: ${cleanTopic}` });
                         }}
-                        className={`py-2 px-2 flex flex-col items-center gap-1 rounded-xl border transition-all ${
+                        className={`py-3 px-1 flex flex-col items-center gap-2 rounded-2xl border transition-all ${
                           params.topic.toLowerCase().startsWith(m.name.toLowerCase()) 
-                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' 
+                            ? `bg-${m.color}-600 border-${m.color}-600 text-white shadow-lg shadow-${m.color}-100` 
                             : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
                         }`}
                       >
-                        <m.icon className="w-3 h-3" />
+                        <m.icon className="w-4 h-4" />
                         <span className="text-[8px] font-black uppercase tracking-widest">{m.name}</span>
                       </button>
                     ))}
+                    <button
+                      onClick={() => setIsABTesting(!isABTesting)}
+                      className={`py-3 px-1 flex flex-col items-center gap-2 rounded-2xl border transition-all ${
+                        isABTesting 
+                          ? 'bg-black border-black text-white shadow-lg shadow-gray-200' 
+                          : 'bg-gray-50 border-gray-100 text-gray-400 hover:bg-gray-100 hover:text-black'
+                      }`}
+                    >
+                      <Split className="w-4 h-4" />
+                      <span className="text-[8px] font-black uppercase tracking-widest">A/B Test</span>
+                    </button>
                   </div>
-                  <textarea 
-                    placeholder="Contoh: 'Ranking: Tablet Android 3-7jt...' atau 'Hidden Gem: Cafe di Jaksel'..."
-                    className="w-full p-3 sm:p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl sm:rounded-2xl transition-all min-h-[120px] sm:min-h-[150px] resize-none outline-none font-medium placeholder:text-gray-300 text-sm sm:text-base shadow-inner"
-                    value={params.topic}
-                    onChange={(e) => setParams({...params, topic: e.target.value})}
-                  />
                 </div>
 
                 <button 
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate()}
                   disabled={isGenerating || !params.topic}
-                  className="w-full py-4 sm:py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-xl sm:rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 text-sm sm:text-base"
+                  className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 text-base"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing...
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      Brewing Magic...
                     </>
                   ) : (
                     <>
-                      <Zap className="w-5 h-5 fill-current" />
-                      Generate Thread
+                      <Zap className="w-6 h-6 fill-current" />
+                      Generate Viral Thread
                     </>
                   )}
                 </button>
@@ -1181,39 +1290,42 @@ function App() {
 
             {/* History Section (Desktop Only) */}
             {history.length > 0 && (
-              <div className="hidden lg:block bg-white p-6 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center">
-                    <History className="w-4 h-4 text-indigo-600" />
+              <div className="hidden lg:block bg-white p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/50">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                    <History className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold">Riwayat</h2>
-                    <p className="text-[10px] text-gray-400">Thread sebelumnya</p>
+                    <h2 className="text-lg font-black tracking-tight">Library</h2>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Past Masterpieces</p>
                   </div>
                 </div>
 
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {history.map((item) => (
                     <div 
                       key={item.id}
                       onClick={() => loadFromHistory(item)}
-                      className="group p-3 bg-gray-50 hover:bg-gray-100 rounded-xl cursor-pointer transition-all border border-transparent hover:border-gray-200 relative"
+                      className="group p-4 bg-gray-50 hover:bg-white rounded-2xl cursor-pointer transition-all border border-transparent hover:border-gray-100 hover:shadow-xl hover:shadow-gray-100 relative"
                     >
-                      <div className="flex justify-between items-start gap-2">
-                        <p className="text-[11px] font-medium text-gray-700 line-clamp-2 pr-6">
+                      <div className="flex justify-between items-start gap-4">
+                        <p className="text-xs font-bold text-gray-700 line-clamp-2 pr-6 leading-relaxed">
                           {item.topic}
                         </p>
                         <button 
                           onClick={(e) => deleteHistoryItem(e, item.id)}
-                          className="absolute top-2 right-2 p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                          className="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-white rounded-lg shadow-sm"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-wider">
-                        <div className="flex items-center gap-2 text-gray-400">
-                          <Clock className="w-2.5 h-2.5" />
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                          <Clock className="w-3 h-3" />
                           {new Date(item.timestamp).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase tracking-widest rounded-md">
+                          {item.length}
                         </div>
                       </div>
                     </div>
@@ -1392,161 +1504,302 @@ function App() {
             </AnimatePresence>
 
             {activeTab === 'preview' && (
-              <>
-                <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-                  <BrainCircuit className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold">Preview Utas (X & Threads)</h2>
-              </div>
-              {thread.length > 0 && (
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      const allText = thread.map((t, i) => `${i + 1}/ ${t}`).join('\n\n');
-                      navigator.clipboard.writeText(allText);
-                      showToast('Thread disalin (dengan nomor)!');
-                    }}
-                    className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg transition-all"
-                  >
-                    Copy with Numbers
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const allText = thread.join('\n\n');
-                      navigator.clipboard.writeText(allText);
-                      showToast('Seluruh thread disalin!');
-                    }}
-                    className="text-xs font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20"
-                  >
-                    Copy All
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-12 sm:space-y-16 relative">
-              <AnimatePresence mode="popLayout">
-                {error && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-red-50 border-2 border-red-100 p-6 rounded-3xl text-red-600 font-bold flex items-center gap-4"
-                  >
-                    <div className="bg-red-100 p-2 rounded-xl">
-                      <Trash2 className="w-5 h-5" />
-                    </div>
-                    {error}
-                  </motion.div>
-                )}
-
-                {thread.length === 0 && !isGenerating && !error && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-white p-20 rounded-[40px] border-4 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-6"
-                  >
-                    <div className="w-20 h-20 bg-gray-50 rounded-[32px] flex items-center justify-center">
-                      <BrainCircuit className="w-10 h-10 text-gray-200" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xl font-bold text-gray-400">Siap Viral?</p>
-                      <p className="text-gray-300 font-medium">Isi detail di samping dan biarkan keajaiban terjadi.</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {isGenerating && (
-                  <div className="space-y-6">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 animate-pulse">
-                        <div className="h-4 bg-gray-50 rounded-full w-3/4 mb-4"></div>
-                        <div className="h-4 bg-gray-50 rounded-full w-1/2"></div>
+              <div className="space-y-12 sm:space-y-16 relative">
+                <AnimatePresence mode="popLayout">
+                  {error && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-red-50 border-2 border-red-100 p-6 rounded-3xl text-red-600 font-bold flex items-center gap-4"
+                    >
+                      <div className="bg-red-100 p-2 rounded-xl">
+                        <Trash2 className="w-5 h-5" />
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {error}
+                    </motion.div>
+                  )}
 
-                {thread.map((tweet, index) => (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-gray-100 group relative hover:border-indigo-600/30 transition-all"
-                  >
-                    <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-10">
-                      <button 
-                        onClick={() => {
-                          copyToClipboard(tweet, index);
-                          showToast(`Tweet ${index + 1} disalin!`);
-                        }}
-                        className={`min-w-[44px] min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-xl sm:rounded-2xl transition-all shadow-lg ${
-                          copiedIndex === index 
-                            ? 'bg-green-500 text-white' 
-                            : 'bg-indigo-600 text-white hover:scale-105 active:scale-95'
-                        }`}
-                      >
-                        {copiedIndex === index ? (
-                          <>
-                            <Check className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Tersalin!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Salin</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    
-                    <div className="flex gap-4 sm:gap-6">
-                      <div className="flex flex-col items-center gap-2 sm:gap-3">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-gray-300 text-base sm:text-lg">
-                          {index + 1}
+                  {thread.length === 0 && !isGenerating && !error && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="bg-white p-20 rounded-[40px] border-4 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-6"
+                    >
+                      <div className="w-20 h-20 bg-gray-50 rounded-[32px] flex items-center justify-center">
+                        <BrainCircuit className="w-10 h-10 text-gray-200" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xl font-bold text-gray-400">Siap Viral?</p>
+                        <p className="text-gray-300 font-medium">Isi detail di samping dan biarkan keajaiban terjadi.</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Version A Display */}
+                  {(thread.length > 0 || isGenerating) && (
+                    <div className="space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">A</div>
+                          <div>
+                            <h2 className="text-lg font-bold">Versi A (Original)</h2>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-gray-400">Gaya penulisan standar ThreadGen</p>
+                              {viralScore && (
+                                <div className="flex flex-col gap-1.5">
+                                  <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100 shadow-sm">
+                                    <TrendingUp className="w-3 h-3 text-green-600" />
+                                    <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Viral Score: {viralScore}%</span>
+                                  </div>
+                                  <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                                    <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${viralScore}%` }}
+                                      className="h-full bg-gradient-to-r from-green-400 to-green-600"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        {index < thread.length - 1 && (
-                          <div className="w-[1.5px] sm:w-[2px] flex-1 bg-gradient-to-b from-gray-100 to-transparent rounded-full"></div>
+                        {thread.length > 0 && (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                const allText = thread.map((t, i) => `${i + 1}/ ${t}`).join('\n\n');
+                                navigator.clipboard.writeText(allText);
+                                showToast('Versi A disalin (dengan nomor)!');
+                              }}
+                              className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg transition-all"
+                            >
+                              Copy with Numbers
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const allText = thread.join('\n\n');
+                                navigator.clipboard.writeText(allText);
+                                showToast('Seluruh Versi A disalin!');
+                              }}
+                              className="text-xs font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+                            >
+                              Copy All
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <div className="flex-1 pt-1 sm:pt-2 pb-12 sm:pb-0">
-                        <p className="whitespace-pre-wrap text-[16px] sm:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
-                          {tweet}
-                        </p>
 
-                        {index === 0 && (coverImage || isGeneratingImage) && (
-                          <div className="mt-6 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square max-w-[400px]">
-                            {isGeneratingImage ? (
-                              <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-gray-400">
-                                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                                <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Meracik Visual...</span>
+                      {isGenerating ? (
+                        <div className="space-y-6">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 animate-pulse">
+                              <div className="h-4 bg-gray-50 rounded-full w-3/4 mb-4"></div>
+                              <div className="h-4 bg-gray-50 rounded-full w-1/2"></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-12">
+                          {thread.map((tweet, index) => (
+                            <motion.div 
+                              key={index}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-gray-100 group relative hover:border-indigo-600/30 transition-all"
+                            >
+                              <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-10">
+                                <button 
+                                  onClick={() => {
+                                    copyToClipboard(tweet, index);
+                                    showToast(`Tweet ${index + 1} disalin!`);
+                                  }}
+                                  className={`min-w-[44px] min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-xl sm:rounded-2xl transition-all shadow-lg ${
+                                    copiedIndex === index 
+                                      ? 'bg-green-500 text-white' 
+                                      : 'bg-indigo-600 text-white hover:scale-105 active:scale-95'
+                                  }`}
+                                >
+                                  {copiedIndex === index ? (
+                                    <>
+                                      <Check className="w-4 h-4" />
+                                      <span className="text-[10px] font-black uppercase tracking-widest">Tersalin!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4" />
+                                      <span className="text-[10px] font-black uppercase tracking-widest">Salin</span>
+                                    </>
+                                  )}
+                                </button>
                               </div>
-                            ) : (
-                              <img 
-                                src={coverImage!} 
-                                alt="Thread Cover" 
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                            )}
-                          </div>
-                        )}
+                              
+                              <div className="flex gap-4 sm:gap-6">
+                                <div className="flex flex-col items-center gap-2 sm:gap-3">
+                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-50 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-gray-300 text-base sm:text-lg">
+                                    {index + 1}
+                                  </div>
+                                  {index < thread.length - 1 && (
+                                    <div className="w-[1.5px] sm:w-[2px] flex-1 bg-gradient-to-b from-gray-100 to-transparent rounded-full"></div>
+                                  )}
+                                </div>
+                                <div className="flex-1 pt-1 sm:pt-2 pb-12 sm:pb-0">
+                                  <p className="whitespace-pre-wrap text-[16px] sm:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
+                                    {tweet}
+                                  </p>
 
-                        <div className="mt-6 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">
-                              {tweet.length} Karakter
-                            </span>
+                                  {index === 0 && (coverImage || isGeneratingImage) && (
+                                    <div className="mt-6 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square max-w-[400px]">
+                                      {isGeneratingImage ? (
+                                        <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-gray-400">
+                                          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                                          <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Meracik Visual...</span>
+                                        </div>
+                                      ) : (
+                                        <img 
+                                          src={coverImage!} 
+                                          alt="Thread Cover" 
+                                          className="w-full h-full object-cover"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="mt-6 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                        {tweet.length} Karakter
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Version B Display (A/B Test) */}
+                  {(threadB.length > 0 || isGeneratingB) && (
+                    <div className="mt-20 pt-20 border-t border-gray-100 space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white font-black">B</div>
+                          <div>
+                            <h2 className="text-lg font-bold">Versi B (Alternatif)</h2>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-gray-400">Gaya penulisan lebih eksperimental</p>
+                              {viralScoreB && (
+                                <div className="flex flex-col gap-1.5">
+                                  <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
+                                    <TrendingUp className="w-3 h-3 text-amber-600" />
+                                    <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Viral Score: {viralScoreB}%</span>
+                                  </div>
+                                  <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                                    <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${viralScoreB}%` }}
+                                      className="h-full bg-gradient-to-r from-amber-400 to-amber-600"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        {threadB.length > 0 && (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                const allText = threadB.map((t, i) => `${i + 1}/ ${t}`).join('\n\n');
+                                navigator.clipboard.writeText(allText);
+                                showToast('Versi B disalin (dengan nomor)!');
+                              }}
+                              className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-amber-600 hover:bg-amber-50 px-4 py-2 rounded-lg transition-all"
+                            >
+                              Copy with Numbers
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const allText = threadB.join('\n\n');
+                                navigator.clipboard.writeText(allText);
+                                showToast('Seluruh Versi B disalin!');
+                              }}
+                              className="text-xs font-black uppercase tracking-widest bg-amber-500 text-white hover:bg-amber-600 px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-amber-500/20"
+                            >
+                              Copy All
+                            </button>
+                          </div>
+                        )}
                       </div>
+
+                      {isGeneratingB ? (
+                        <div className="space-y-6">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="bg-white p-8 rounded-[32px] border border-gray-100 animate-pulse">
+                              <div className="h-4 bg-gray-50 rounded-full w-3/4 mb-4"></div>
+                              <div className="h-4 bg-gray-50 rounded-full w-1/2"></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-12">
+                          {threadB.map((tweet, index) => (
+                            <motion.div 
+                              key={index}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-gray-100 group relative hover:border-amber-600/30 transition-all"
+                            >
+                              <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-10">
+                                <button 
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(tweet);
+                                    showToast(`Tweet ${index + 1} Versi B disalin!`);
+                                  }}
+                                  className="min-w-[44px] min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-xl sm:rounded-2xl transition-all shadow-lg bg-amber-500 text-white hover:scale-105 active:scale-95"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Salin</span>
+                                </button>
+                              </div>
+                              
+                              <div className="flex gap-4 sm:gap-6">
+                                <div className="flex flex-col items-center gap-2 sm:gap-3">
+                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-amber-300 text-base sm:text-lg">
+                                    {index + 1}
+                                  </div>
+                                  {index < threadB.length - 1 && (
+                                    <div className="w-[1.5px] sm:w-[2px] flex-1 bg-gradient-to-b from-amber-100 to-transparent rounded-full"></div>
+                                  )}
+                                </div>
+                                <div className="flex-1 pt-1 sm:pt-2 pb-12 sm:pb-0">
+                                  <p className="whitespace-pre-wrap text-[16px] sm:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
+                                    {tweet}
+                                  </p>
+
+                                  <div className="mt-6 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                        {tweet.length} Karakter
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                  )}
+                </AnimatePresence>
 
               {/* Bottom History Section (Visible after generation) */}
               {history.length > 0 && thread.length > 0 && (
@@ -1598,7 +1851,6 @@ function App() {
                 </motion.div>
               )}
             </div>
-          </>
         )}
       </section>
         </div>

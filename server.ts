@@ -120,6 +120,19 @@ Langsung jelasin tipsnya. Kenapa kebanyakan orang skip ini. Konteks dari pengala
 
 Utas terakhir — ajak kalian share tips tambahan yang mereka tau.
 
+──────────────────────────────
+MODEL 7: ROAST & IMPROVE
+Dipanggil dengan: "roast", "perbaiki", "improve", atau "model 7"
+──────────────────────────────
+Utas 1 — Hook:
+🔥 ROASTING THREAD INI: [JUDUL/TOPIK]
+Kasih opini jujur (tapi tetep asik) kenapa thread aslinya kurang nendang.
+
+Utas 2–N — Versi Perbaikan:
+Tulis ulang thread tersebut dengan gaya ThreadGen yang jauh lebih viral, hook lebih tajam, dan storytelling lebih dapet.
+
+Utas terakhir — bandingkan kenapa versi ini lebih baik.
+
 ═══════════════════════════════
 FORMAT OUTPUT
 ═══════════════════════════════
