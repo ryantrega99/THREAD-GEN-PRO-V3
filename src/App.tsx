@@ -575,23 +575,23 @@ function App() {
         </div>
 
         {/* Navigation */}
-        <nav className="relative z-50 max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20">
-              <BrainCircuit className="text-white w-6 h-6" />
+        <nav className="relative z-50 max-w-7xl mx-auto px-4 sm:px-6 h-20 sm:h-24 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg shadow-indigo-500/20">
+              <BrainCircuit className="text-white w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase font-display">Thread Gen<span className="text-indigo-600">Pro</span></span>
+            <span className="text-lg sm:text-xl font-black tracking-tighter uppercase font-display">Thread Gen<span className="text-indigo-600">Pro</span></span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <button 
               onClick={handleGetAccess}
-              className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold hover:bg-white/10 transition-all flex items-center gap-2"
+              className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold hover:bg-white/10 transition-all flex items-center gap-2"
             >
-              <LogIn className="w-4 h-4" /> {hasAccess ? 'Dashboard' : 'Login'}
+              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {hasAccess ? 'Dashboard' : 'Login'}
             </button>
             <button 
               onClick={handleGetAccess}
-              className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+              className="px-4 sm:px-6 py-2 sm:py-2.5 bg-indigo-600 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
             >
               Get Started
             </button>
@@ -600,7 +600,7 @@ function App() {
 
         <main className="relative z-10">
           {/* Hero Section - Split Layout */}
-          <section className="max-w-7xl mx-auto px-6 pt-20 pb-32 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-20 sm:pb-32 grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-20 items-center relative">
             {/* Animated Background Glows */}
             <motion.div 
               animate={{ 
@@ -636,7 +636,7 @@ function App() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
-                className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[0.85] font-display"
+                className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter leading-[0.85] font-display"
               >
                 DOMINASI <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 bg-[length:200%_auto] animate-gradient">THREADS</span> <br />
@@ -647,7 +647,7 @@ function App() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="text-gray-400 text-xl md:text-2xl max-w-xl leading-relaxed"
+                className="text-gray-400 text-lg sm:text-xl md:text-2xl max-w-xl leading-relaxed"
               >
                 Ubah ide mentah jadi thread viral yang terasa <span className="text-white font-bold italic">"manusia banget"</span> dalam 30 detik. 100% Anti-AI detection.
               </motion.p>
@@ -724,9 +724,9 @@ function App() {
           </section>
 
           {/* Features Bento Grid */}
-          <section id="features" className="py-32 bg-white/[0.01] border-y border-white/5">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-24 space-y-6">
+          <section id="features" className="py-16 sm:py-32 bg-white/[0.01] border-y border-white/5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-12 sm:mb-24 space-y-4 sm:space-y-6">
                 <motion.div 
                   initial={{ y: 20, opacity: 0 }}
                   whileInView={{ y: 0, opacity: 1 }}
@@ -736,28 +736,28 @@ function App() {
                   <Sparkles className="w-3 h-3" />
                   Powerful Features
                 </motion.div>
-                <h2 className="text-4xl md:text-6xl font-black font-display tracking-tight">ENGINEERED FOR <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-violet-500">VIRALITY</span></h2>
-                <p className="text-gray-400 text-xl max-w-2xl mx-auto">Setiap fitur dirancang untuk satu tujuan: membuat konten kamu berhenti di scroll orang.</p>
+                <h2 className="text-3xl sm:text-4xl md:text-6xl font-black font-display tracking-tight">ENGINEERED FOR <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-violet-500">VIRALITY</span></h2>
+                <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto">Setiap fitur dirancang untuk satu tujuan: membuat konten kamu berhenti di scroll orang.</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <motion.div 
                   initial={{ y: 20, opacity: 0 }}
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
-                  className="glass-card p-10 md:col-span-2 flex flex-col justify-between group relative overflow-hidden border-white/10"
+                  className="glass-card p-6 sm:p-10 md:col-span-2 flex flex-col justify-between group relative overflow-hidden border-white/10"
                 >
                   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-[80px] -z-10 group-hover:bg-indigo-600/20 transition-colors" />
                   <div>
-                    <div className="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                      <ShieldCheck className="w-8 h-8 text-indigo-500" />
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform">
+                      <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-500" />
                     </div>
-                    <h3 className="text-3xl font-black mb-4 font-display uppercase">100% Anti-AI Engine</h3>
-                    <p className="text-gray-400 text-lg leading-relaxed max-w-md">Algoritma kami dilatih khusus untuk meniru gaya penulisan manusia yang emosional, berantakan secara natural, dan punya opini kuat. Dijamin lolos deteksi AI manapun.</p>
+                    <h3 className="text-2xl sm:text-3xl font-black mb-4 font-display uppercase">100% Anti-AI Engine</h3>
+                    <p className="text-gray-400 text-base sm:text-lg leading-relaxed max-w-md">Algoritma kami dilatih khusus untuk meniru gaya penulisan manusia yang emosional, berantakan secara natural, dan punya opini kuat. Dijamin lolos deteksi AI manapun.</p>
                   </div>
-                  <div className="mt-12 flex items-center gap-4">
-                    <div className="px-4 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500 border border-white/5">No "Tentu Saja"</div>
-                    <div className="px-4 py-2 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500 border border-white/5">Natural Typos</div>
+                  <div className="mt-8 sm:mt-12 flex flex-wrap items-center gap-3 sm:gap-4">
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 border border-white/5">No "Tentu Saja"</div>
+                    <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 border border-white/5">Natural Typos</div>
                   </div>
                 </motion.div>
 
@@ -766,14 +766,14 @@ function App() {
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.1 }}
-                  className="glass-card p-10 group relative overflow-hidden border-white/10"
+                  className="glass-card p-6 sm:p-10 group relative overflow-hidden border-white/10"
                 >
                   <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-500/10 transition-all" />
-                  <div className="w-16 h-16 bg-amber-600/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                    <Zap className="w-8 h-8 text-amber-500" />
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-amber-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform">
+                    <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
                   </div>
-                  <h3 className="text-2xl font-black mb-4 font-display">VIRAL BOOSTER</h3>
-                  <p className="text-gray-400 leading-relaxed">Saran kata kunci dan hook yang sedang trending di Indonesia untuk meningkatkan engagement secara instan.</p>
+                  <h3 className="text-xl sm:text-2xl font-black mb-4 font-display">VIRAL BOOSTER</h3>
+                  <p className="text-gray-400 text-sm sm:text-base leading-relaxed">Saran kata kunci dan hook yang sedang trending di Indonesia untuk meningkatkan engagement secara instan.</p>
                 </motion.div>
 
                 <motion.div 
@@ -781,14 +781,14 @@ function App() {
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.2 }}
-                  className="glass-card p-10 group relative overflow-hidden border-white/10"
+                  className="glass-card p-6 sm:p-10 group relative overflow-hidden border-white/10"
                 >
                   <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-all" />
-                  <div className="w-16 h-16 bg-violet-600/20 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                    <Split className="w-8 h-8 text-violet-500" />
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-violet-600/20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform">
+                    <Split className="w-6 h-6 sm:w-8 sm:h-8 text-violet-500" />
                   </div>
-                  <h3 className="text-2xl font-black mb-4 font-display">A/B TESTING</h3>
-                  <p className="text-gray-400 leading-relaxed">Generate dua versi thread sekaligus dan bandingkan mana yang punya potensi viral lebih tinggi.</p>
+                  <h3 className="text-xl sm:text-2xl font-black mb-4 font-display">A/B TESTING</h3>
+                  <p className="text-gray-400 text-sm sm:text-base leading-relaxed">Generate dua versi thread sekaligus dan bandingkan mana yang punya potensi viral lebih tinggi.</p>
                 </motion.div>
 
                 <motion.div 
@@ -796,24 +796,24 @@ function App() {
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.3 }}
-                  className="glass-card p-10 md:col-span-2 flex items-center gap-10 group relative overflow-hidden border-white/10"
+                  className="glass-card p-6 sm:p-10 md:col-span-2 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 group relative overflow-hidden border-white/10"
                 >
                   <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-600/10 blur-[80px] -z-10 group-hover:bg-violet-600/20 transition-colors" />
                   <div className="hidden sm:block w-1/3">
-                    <div className="aspect-square bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[40px] shadow-2xl shadow-indigo-500/20 flex items-center justify-center">
-                      <TrendingUp className="w-20 h-20 text-white" />
+                    <div className="aspect-square bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[32px] sm:rounded-[40px] shadow-2xl shadow-indigo-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-16 h-16 sm:w-20 sm:h-20 text-white" />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-3xl font-black mb-4 font-display">TRENDING INSIGHT</h3>
-                    <p className="text-gray-400 text-lg leading-relaxed">Dapatkan update topik apa yang lagi panas di Threads Indonesia setiap harinya agar kontenmu selalu relevan.</p>
-                    <div className="mt-10 flex items-center gap-6">
+                    <h3 className="text-2xl sm:text-3xl font-black mb-4 font-display">TRENDING INSIGHT</h3>
+                    <p className="text-gray-400 text-base sm:text-lg leading-relaxed">Dapatkan update topik apa yang lagi panas di Threads Indonesia setiap harinya agar kontenmu selalu relevan.</p>
+                    <div className="mt-6 sm:mt-10 flex items-center gap-4 sm:gap-6">
                       <div className="flex -space-x-3">
                         {[1,2,3].map(i => (
-                          <div key={i} className="w-10 h-10 rounded-full bg-white/10 border-2 border-[#0A0A0B] flex items-center justify-center text-[10px] font-bold">#{i}</div>
+                          <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 border-2 border-[#0A0A0B] flex items-center justify-center text-[9px] sm:text-[10px] font-bold">#{i}</div>
                         ))}
                       </div>
-                      <span className="text-xs font-black uppercase tracking-widest text-indigo-500">Real-time Analysis</span>
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-indigo-500">Real-time Analysis</span>
                     </div>
                   </div>
                 </motion.div>
@@ -822,14 +822,14 @@ function App() {
           </section>
 
           {/* How It Works */}
-          <section className="py-32">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-24 space-y-6">
-                <h2 className="text-4xl md:text-6xl font-black font-display tracking-tight">CARA KERJA <span className="text-indigo-500">THREADGEN</span></h2>
-                <p className="text-gray-400 text-xl max-w-2xl mx-auto">Dari ide mentah jadi thread viral dalam hitungan detik.</p>
+          <section className="py-16 sm:py-32">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-16 sm:mb-24 space-y-4 sm:space-y-6">
+                <h2 className="text-3xl sm:text-4xl md:text-6xl font-black font-display tracking-tight">CARA KERJA <span className="text-indigo-500">THREADGEN</span></h2>
+                <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto">Dari ide mentah jadi thread viral dalam hitungan detik.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-12 relative">
                 {/* Connecting Line */}
                 <div className="hidden md:block absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent -translate-y-1/2 z-0" />
                 
@@ -862,9 +862,9 @@ function App() {
           </section>
 
           {/* Social Proof / Testimonials */}
-          <section className="py-32 bg-indigo-600/5">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <section className="py-16 sm:py-32 bg-indigo-600/5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 {[
                   { name: "Budi Santoso", role: "Tech Influencer", text: "Gila sih, hook-nya beneran berasa nulis sendiri. Engagement rate naik 40% sejak pake ThreadGen.", avatar: "https://i.pravatar.cc/100?u=1" },
                   { name: "Siti Aminah", role: "Content Creator", text: "Dulu bikin thread bisa sejam, sekarang 30 detik kelar. Tone bahasanya asik banget, gak kaku.", avatar: "https://i.pravatar.cc/100?u=2" },
@@ -876,18 +876,18 @@ function App() {
                     whileInView={{ scale: 1, opacity: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1 }}
-                    className="glass-card p-8 space-y-6"
+                    className="glass-card p-6 sm:p-8 space-y-4 sm:space-y-6"
                   >
                     <div className="flex items-center gap-4">
-                      <img src={t.avatar} className="w-12 h-12 rounded-full border border-white/10" referrerPolicy="no-referrer" />
+                      <img src={t.avatar} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/10" referrerPolicy="no-referrer" />
                       <div>
-                        <h4 className="font-bold">{t.name}</h4>
-                        <p className="text-xs text-gray-500">{t.role}</p>
+                        <h4 className="font-bold text-sm sm:text-base">{t.name}</h4>
+                        <p className="text-[10px] sm:text-xs text-gray-500">{t.role}</p>
                       </div>
                     </div>
-                    <p className="text-gray-400 italic">"{t.text}"</p>
+                    <p className="text-gray-400 text-sm sm:text-base italic">"{t.text}"</p>
                     <div className="flex gap-1">
-                      {[1,2,3,4,5].map(s => <Sparkles key={s} className="w-3 h-3 text-amber-500 fill-amber-500" />)}
+                      {[1,2,3,4,5].map(s => <Sparkles key={s} className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 fill-amber-500" />)}
                     </div>
                   </motion.div>
                 ))}
@@ -896,10 +896,10 @@ function App() {
           </section>
 
           {/* FAQ Section */}
-          <section className="py-32">
-            <div className="max-w-3xl mx-auto px-6">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl font-black font-display tracking-tight">PERTANYAAN <span className="text-indigo-500">UMUM</span></h2>
+          <section className="py-16 sm:py-32">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-12 sm:mb-16">
+                <h2 className="text-3xl sm:text-4xl font-black font-display tracking-tight">PERTANYAAN <span className="text-indigo-500">UMUM</span></h2>
               </div>
               <div className="space-y-4">
                 {[
@@ -926,42 +926,42 @@ function App() {
           </section>
 
           {/* Pricing / CTA */}
-          <section className="py-32">
-            <div className="max-w-4xl mx-auto px-6 text-center">
+          <section className="py-16 sm:py-32">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
               <motion.div 
                 initial={{ y: 40, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
-                className="glass-card p-12 sm:p-20 relative overflow-hidden group"
+                className="glass-card p-8 sm:p-20 relative overflow-hidden group"
               >
                 <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-600/20 transition-all" />
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-violet-600/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2" />
                 
-                <div className="relative z-10 space-y-10">
+                <div className="relative z-10 space-y-8 sm:space-y-10">
                   <div className="inline-flex items-center gap-2 px-6 py-2 bg-red-600 text-white font-black uppercase tracking-widest rounded-full text-[10px] animate-pulse">
                     Limited Offer: Sisa {slotsLeft} Slot!
                   </div>
-                  <h2 className="text-5xl md:text-7xl font-black font-display tracking-tighter leading-none">
+                  <h2 className="text-3xl sm:text-5xl md:text-7xl font-black font-display tracking-tighter leading-none">
                     INVESTASI SEKALI <br />UNTUK <span className="text-indigo-500">SELAMANYA.</span>
                   </h2>
                   <div className="flex flex-col items-center gap-2">
-                    <p className="text-gray-500 text-2xl line-through font-bold">Rp 299.000</p>
+                    <p className="text-gray-500 text-xl sm:text-2xl line-through font-bold">Rp 299.000</p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-gray-400">Rp</span>
-                      <p className="text-8xl md:text-9xl font-black tracking-tighter">99rb</p>
+                      <span className="text-xl sm:text-2xl font-bold text-gray-400">Rp</span>
+                      <p className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tighter">99rb</p>
                     </div>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <button 
                       onClick={handleGetAccess}
-                      className="premium-button w-full sm:w-auto text-xl px-12 py-6"
+                      className="premium-button w-full sm:w-auto text-lg sm:text-xl px-8 sm:px-12 py-4 sm:py-6"
                     >
                       AMBIL AKSES SEKARANG
                     </button>
-                    <div className="flex flex-wrap justify-center gap-6 text-gray-500 text-xs font-bold uppercase tracking-widest">
-                      <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> One-time Payment</span>
-                      <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Lifetime Access</span>
-                      <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Future Updates</span>
+                    <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-gray-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest">
+                      <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> One-time Payment</span>
+                      <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> Lifetime Access</span>
+                      <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> Future Updates</span>
                     </div>
                   </div>
                 </div>
@@ -970,13 +970,13 @@ function App() {
           </section>
         </main>
 
-        <footer className="py-20 border-t border-white/5 text-center">
-          <div className="max-w-7xl mx-auto px-6 space-y-8">
+        <footer className="py-12 sm:py-20 border-t border-white/5 text-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6 sm:space-y-8">
             <div className="flex items-center justify-center gap-3">
-              <BrainCircuit className="text-indigo-600 w-6 h-6" />
-              <span className="text-xl font-black tracking-tighter uppercase font-display">Thread Gen<span className="text-indigo-600">Pro</span></span>
+              <BrainCircuit className="text-indigo-600 w-5 h-5 sm:w-6 sm:h-6" />
+              <span className="text-lg sm:text-xl font-black tracking-tighter uppercase font-display">Thread Gen<span className="text-indigo-600">Pro</span></span>
             </div>
-            <p className="text-gray-500 text-sm">© 2026 ThreadGen Pro. Dirancang untuk Kreator Indonesia.</p>
+            <p className="text-gray-500 text-xs sm:text-sm">© 2026 ThreadGen Pro. Dirancang untuk Kreator Indonesia.</p>
           </div>
         </footer>
       </div>
@@ -1016,38 +1016,38 @@ function App() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md bg-white/5 border border-white/10 p-6 sm:p-10 rounded-[32px] sm:rounded-[40px] backdrop-blur-xl space-y-6 sm:space-y-8 relative z-10"
+          className="w-full max-w-md bg-white/5 border border-white/10 p-5 sm:p-10 rounded-[24px] sm:rounded-[40px] backdrop-blur-xl space-y-6 sm:space-y-8 relative z-10"
         >
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/20">
-              <Lock className="w-8 h-8 text-white" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-amber-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg shadow-amber-500/20">
+              <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Aktivasi Akses</h2>
-            <p className="text-gray-400 text-sm sm:text-base">Masukkan kode akses untuk mulai menggunakan Thread Gen Pro v10</p>
+            <h2 className="text-xl sm:text-3xl font-black uppercase tracking-tighter">Aktivasi Akses</h2>
+            <p className="text-gray-400 text-xs sm:text-base">Masukkan kode akses untuk mulai menggunakan Thread Gen Pro v10</p>
           </div>
 
-          <form onSubmit={handleVerifyCode} className="space-y-6">
+          <form onSubmit={handleVerifyCode} className="space-y-4 sm:space-y-6">
             <input 
               type="text" 
               required
               placeholder="KODE-AKSES-ANDA"
-              className="w-full px-4 py-6 bg-white/5 border border-white/10 rounded-2xl focus:border-amber-500 outline-none transition-all font-black text-center text-xl sm:text-2xl tracking-[0.3em] uppercase placeholder:tracking-normal placeholder:font-medium placeholder:text-lg"
+              className="w-full px-4 py-4 sm:py-6 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl focus:border-amber-500 outline-none transition-all font-black text-center text-lg sm:text-2xl tracking-[0.2em] sm:tracking-[0.3em] uppercase placeholder:tracking-normal placeholder:font-medium placeholder:text-base sm:placeholder:text-lg"
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value)}
             />
 
             <button 
               type="submit"
-              className="w-full py-4 bg-amber-500 text-white font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] transition-all shadow-lg shadow-amber-500/20"
+              className="w-full py-3.5 sm:py-4 bg-amber-500 text-white font-black uppercase tracking-widest rounded-xl sm:rounded-2xl hover:scale-[1.02] transition-all shadow-lg shadow-amber-500/20"
             >
               Aktivasi Sekarang
             </button>
           </form>
 
-          <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/20 p-5 sm:p-6 rounded-2xl sm:rounded-3xl space-y-3 sm:space-y-4">
             <div className="space-y-1">
-              <p className="text-xs font-black uppercase tracking-widest text-amber-500">Belum punya kode?</p>
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-amber-500">Belum punya kode?</p>
+              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
                 Dapatkan kode akses eksklusif kamu melalui link pembayaran resmi kami di bawah ini:
               </p>
             </div>
@@ -1055,9 +1055,9 @@ function App() {
               href="https://larisdigi.myscalev.com/threads-gen"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white text-base font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-amber-500/20"
+              className="w-full py-3.5 sm:py-4 bg-amber-500 hover:bg-amber-600 text-white text-sm sm:text-base font-black uppercase tracking-widest rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 sm:gap-3 transition-all shadow-lg shadow-amber-500/20"
             >
-              BELI KODE AKSES SEKARANG <ArrowRight className="w-5 h-5" />
+              BELI KODE AKSES SEKARANG <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </a>
             <p className="text-[10px] text-center text-gray-500 font-medium italic">
               *Setelah pembayaran sukses, kode akan dikirimkan otomatis ke WhatsApp/Email Anda.
@@ -1099,14 +1099,14 @@ function App() {
       </AnimatePresence>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => setView('landing')}>
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-2 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg shadow-indigo-100">
-              <BrainCircuit className="text-white w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shadow-lg shadow-indigo-100">
+              <BrainCircuit className="text-white w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <span className="text-lg sm:text-xl font-black tracking-tighter uppercase">Thread Gen<span className="text-indigo-600">Pro</span></span>
+            <span className="text-base sm:text-xl font-black tracking-tighter uppercase">Thread Gen<span className="text-indigo-600">Pro</span></span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-4">
             <div className="hidden sm:flex flex-col items-end mr-2">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</span>
               <span className="text-xs font-bold text-indigo-600">PRO MEMBER</span>
@@ -1114,17 +1114,17 @@ function App() {
             <div className="flex items-center gap-1 sm:gap-2">
               <button 
                 onClick={handleLogout}
-                className="p-2 sm:p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg sm:rounded-xl transition-all"
+                className="p-1.5 sm:p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg sm:rounded-xl transition-all"
                 title="Logout"
               >
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                <LogOut className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </button>
               <button 
                 onClick={reset}
-                className="p-2 sm:p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg sm:rounded-xl transition-all"
+                className="p-1.5 sm:p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg sm:rounded-xl transition-all"
                 title="Reset All"
               >
-                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Trash2 className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </button>
             </div>
             <div className="hidden sm:block h-8 w-[1px] bg-gray-200 mx-2" />
@@ -1136,18 +1136,18 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10">
           {/* Left Column: Form & History (Desktop) */}
           <aside className="lg:col-span-4 space-y-6 sm:space-y-8">
-            <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/50 sticky top-28">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
-                  <Sparkles className="w-6 h-6 text-white" />
+            <div className="bg-white p-5 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/50 sticky top-28">
+              <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black tracking-tight">Generator Utas</h2>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Premium Engine v10</p>
+                  <h2 className="text-lg sm:text-xl font-black tracking-tight">Generator Utas</h2>
+                  <p className="text-[9px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">Premium Engine v10</p>
                 </div>
               </div>
 
@@ -1390,16 +1390,16 @@ function App() {
           {/* Right Column: Preview & History (Mobile) */}
           <section className="lg:col-span-8 space-y-6 sm:space-y-8">
             {/* Mobile Tabs */}
-            <div className="lg:hidden flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="lg:hidden flex bg-white p-1 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm">
               <button 
                 onClick={() => setActiveTab('preview')}
-                className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'preview' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400'}`}
+                className={`flex-1 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'preview' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400'}`}
               >
                 Preview Utas
               </button>
               <button 
                 onClick={() => setActiveTab('history')}
-                className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400'}`}
+                className={`flex-1 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400'}`}
               >
                 Riwayat ({history.length})
               </button>
@@ -1407,14 +1407,14 @@ function App() {
 
             {/* History Section (Mobile/Tab Only) */}
             {activeTab === 'history' && history.length > 0 && (
-              <div className="lg:hidden bg-white p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
+              <div className="lg:hidden bg-white p-5 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
                 <div className="flex items-center gap-3 mb-6 sm:mb-8">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 rounded-lg sm:rounded-xl flex items-center justify-center">
                     <History className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                   </div>
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold">Riwayat</h2>
-                    <p className="text-xs sm:text-sm text-gray-400">Thread yang pernah dibuat</p>
+                    <h2 className="text-base sm:text-xl font-bold">Riwayat</h2>
+                    <p className="text-[10px] sm:text-sm text-gray-400">Thread yang pernah dibuat</p>
                   </div>
                 </div>
 
@@ -1504,18 +1504,18 @@ function App() {
             </AnimatePresence>
 
             {activeTab === 'preview' && (
-              <div className="space-y-12 sm:space-y-16 relative">
+              <div className="space-y-8 sm:space-y-16 relative">
                 <AnimatePresence mode="popLayout">
                   {error && (
                     <motion.div 
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 border-2 border-red-100 p-6 rounded-3xl text-red-600 font-bold flex items-center gap-4"
+                      className="bg-red-50 border-2 border-red-100 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-red-600 font-bold flex items-center gap-3 sm:gap-4"
                     >
-                      <div className="bg-red-100 p-2 rounded-xl">
-                        <Trash2 className="w-5 h-5" />
+                      <div className="bg-red-100 p-2 rounded-lg sm:rounded-xl">
+                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      {error}
+                      <span className="text-sm sm:text-base">{error}</span>
                     </motion.div>
                   )}
 
@@ -1523,14 +1523,14 @@ function App() {
                     <motion.div 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="bg-white p-20 rounded-[40px] border-4 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-6"
+                      className="bg-white p-12 sm:p-20 rounded-[32px] sm:rounded-[40px] border-4 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-4 sm:space-y-6"
                     >
-                      <div className="w-20 h-20 bg-gray-50 rounded-[32px] flex items-center justify-center">
-                        <BrainCircuit className="w-10 h-10 text-gray-200" />
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-[24px] sm:rounded-[32px] flex items-center justify-center">
+                        <BrainCircuit className="w-8 h-8 sm:w-10 sm:h-10 text-gray-200" />
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-xl font-bold text-gray-400">Siap Viral?</p>
-                        <p className="text-gray-300 font-medium">Isi detail di samping dan biarkan keajaiban terjadi.</p>
+                      <div className="space-y-1 sm:space-y-2">
+                        <p className="text-lg sm:text-xl font-bold text-gray-400">Siap Viral?</p>
+                        <p className="text-sm sm:text-base text-gray-300 font-medium">Isi detail di samping dan biarkan keajaiban terjadi.</p>
                       </div>
                     </motion.div>
                   )}
@@ -1644,7 +1644,7 @@ function App() {
                                   )}
                                 </div>
                                 <div className="flex-1 pt-1 sm:pt-2 pb-12 sm:pb-0">
-                                  <p className="whitespace-pre-wrap text-[16px] sm:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
+                                  <p className="whitespace-pre-wrap text-[15px] sm:text-[18px] md:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
                                     {tweet}
                                   </p>
 
@@ -1685,7 +1685,7 @@ function App() {
 
                   {/* Version B Display (A/B Test) */}
                   {(threadB.length > 0 || isGeneratingB) && (
-                    <div className="mt-20 pt-20 border-t border-gray-100 space-y-8">
+                    <div className="mt-12 sm:mt-20 pt-12 sm:pt-20 border-t border-gray-100 space-y-8">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white font-black">B</div>
@@ -1779,7 +1779,7 @@ function App() {
                                   )}
                                 </div>
                                 <div className="flex-1 pt-1 sm:pt-2 pb-12 sm:pb-0">
-                                  <p className="whitespace-pre-wrap text-[16px] sm:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
+                                  <p className="whitespace-pre-wrap text-[15px] sm:text-[18px] md:text-[19px] leading-[1.8] text-gray-800 font-medium tracking-tight">
                                     {tweet}
                                   </p>
 
@@ -1806,7 +1806,7 @@ function App() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-20 pt-20 border-t border-gray-100"
+                  className="mt-12 sm:mt-20 pt-12 sm:pt-20 border-t border-gray-100"
                 >
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-3">
@@ -1828,7 +1828,7 @@ function App() {
                           loadFromHistory(item);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className="group p-5 bg-white hover:bg-gray-50 rounded-[24px] cursor-pointer transition-all border border-gray-100 hover:border-indigo-600/30 shadow-[0_4px_20px_rgb(0,0,0,0.02)] relative"
+                        className="group p-4 sm:p-5 bg-white hover:bg-gray-50 rounded-[24px] cursor-pointer transition-all border border-gray-100 hover:border-indigo-600/30 shadow-[0_4px_20px_rgb(0,0,0,0.02)] relative"
                       >
                         <div className="flex justify-between items-start gap-4">
                           <p className="text-sm font-bold text-gray-700 line-clamp-2">
