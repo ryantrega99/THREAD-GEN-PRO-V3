@@ -1121,10 +1121,39 @@ function App() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Kategori, Harga & Daftar Produk</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Pilih Model Konten</label>
+                    <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">6 Models Available</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 mb-3">
+                    {[
+                      { name: 'Ranking', icon: ListOrdered },
+                      { name: 'Hidden Gem', icon: Sparkles },
+                      { name: 'Versus', icon: Split },
+                      { name: 'Tier List', icon: TrendingUp },
+                      { name: 'Cerita', icon: MessageCircle },
+                      { name: 'Tips', icon: Lightbulb }
+                    ].map((m) => (
+                      <button
+                        key={m.name}
+                        onClick={() => {
+                          const cleanTopic = params.topic.replace(/^(ranking|hidden gem|versus|vs|tier list|tier|cerita|pengalaman|story|tips|hacks|cara|model \d):\s*/i, '');
+                          setParams({ ...params, topic: `${m.name.toLowerCase()}: ${cleanTopic}` });
+                        }}
+                        className={`py-2 px-2 flex flex-col items-center gap-1 rounded-xl border transition-all ${
+                          params.topic.toLowerCase().startsWith(m.name.toLowerCase()) 
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200' 
+                            : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
+                        }`}
+                      >
+                        <m.icon className="w-3 h-3" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">{m.name}</span>
+                      </button>
+                    ))}
+                  </div>
                   <textarea 
-                    placeholder="Contoh: 'Kategori: Tablet Android. Range Harga: 3-7 Juta. Produk: Samsung Tab S9 FE, Xiaomi Pad 6, Huawei MatePad 11'..."
-                    className="w-full p-3 sm:p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl sm:rounded-2xl transition-all min-h-[100px] sm:min-h-[120px] resize-none outline-none font-medium placeholder:text-gray-300 text-sm sm:text-base"
+                    placeholder="Contoh: 'Ranking: Tablet Android 3-7jt...' atau 'Hidden Gem: Cafe di Jaksel'..."
+                    className="w-full p-3 sm:p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl sm:rounded-2xl transition-all min-h-[120px] sm:min-h-[150px] resize-none outline-none font-medium placeholder:text-gray-300 text-sm sm:text-base shadow-inner"
                     value={params.topic}
                     onChange={(e) => setParams({...params, topic: e.target.value})}
                   />
