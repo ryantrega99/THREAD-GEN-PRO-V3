@@ -1121,9 +1121,9 @@ function App() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Kategori & Daftar Produk</label>
+                  <label className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Kategori, Harga & Daftar Produk</label>
                   <textarea 
-                    placeholder="Contoh: 'Kategori: Skincare Cowok. Produk: Sabun cuci muka Kahf, Sunscreen Azarine, Moisturizer Glad2Glow'..."
+                    placeholder="Contoh: 'Kategori: Tablet Android. Range Harga: 3-7 Juta. Produk: Samsung Tab S9 FE, Xiaomi Pad 6, Huawei MatePad 11'..."
                     className="w-full p-3 sm:p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-xl sm:rounded-2xl transition-all min-h-[100px] sm:min-h-[120px] resize-none outline-none font-medium placeholder:text-gray-300 text-sm sm:text-base"
                     value={params.topic}
                     onChange={(e) => setParams({...params, topic: e.target.value})}
