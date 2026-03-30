@@ -4,6 +4,7 @@ export interface ThreadParams {
   topic: string;
   length?: 'PENDEK' | 'PANJANG' | 'REKOMENDASI';
   tone?: 'GALAK' | 'SANTAI' | 'MOTIVASI' | 'HUMOR' | 'HANIFMUH';
+  shopeeLinks?: string[];
 }
 
 export interface ViralBooster {
@@ -37,8 +38,8 @@ FORMAT OUTPUT:
 STRUKTUR UTAS:
 1/ → Hook yang bikin penasaran, sedikit "ngaget-ngagetin" tapi jujur
 2/ → REKOMENDASI PRODUK: Setelah tweet pertama, WAJIB tambahkan satu tweet rekomendasi produk yang relevan dengan topik. 
-    Format: "Btw, buat yang nyari [produk terkait], ini ada yang bagus di Shopee: [link Shopee]". 
-    Gunakan link Shopee asli jika tahu, atau gunakan placeholder "https://shope.ee/rekomendasi-produk" jika tidak tahu link spesifiknya.
+    Gunakan link Shopee yang diberikan oleh user. DILARANG KERAS menggunakan link Shopee lain atau link placeholder.
+    Jika user tidak memberikan link, gunakan placeholder "https://shope.ee/rekomendasi-produk" hanya jika benar-benar diperlukan.
 3/ → Konteks / kenapa topik ini penting sekarang
 4/ dst → Isi utama, satu poin atau satu kategori per tweet
 N/ → Kesimpulan atau penutup

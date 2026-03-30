@@ -89,5 +89,9 @@ service cloud.firestore {
       allow update: if isDocOwner() && isValidThread(request.resource.data);
       allow delete: if isDocOwner() || isAdmin();
     }
+
+    match /test/connection {
+      allow read: if true;
+    }
   }
 }
