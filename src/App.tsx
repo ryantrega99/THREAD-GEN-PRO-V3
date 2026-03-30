@@ -473,6 +473,18 @@ function App() {
       } else {
         const sanitizedTweets = (result.tweets || []).map(t => t.trim());
         
+        // Fail-safe: Ensure Shopee links are in the output
+        const filteredShopeeLinks = (params.shopeeLinks || []).filter(link => link.trim() !== '');
+        if (filteredShopeeLinks.length > 0) {
+          const allOutputText = sanitizedTweets.join(' ').toLowerCase();
+          const missingLinks = filteredShopeeLinks.filter(link => !allOutputText.includes(link.toLowerCase()));
+          
+          if (missingLinks.length > 0 && sanitizedTweets.length > 0) {
+            const lastIndex = sanitizedTweets.length - 1;
+            sanitizedTweets[lastIndex] = `${sanitizedTweets[lastIndex]}\n\n🛒 Cek di sini:\n${missingLinks.join('\n')}`;
+          }
+        }
+        
         if (isVersionB) {
           setThreadB(sanitizedTweets);
           setViralScoreB(calculateViralScore(sanitizedTweets.join(' ')));
@@ -1316,9 +1328,15 @@ function App() {
                   </div>
                 </div>
 
-                {/* Model Selection Grid */}
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
+                    {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
+                      <span className="flex items-center gap-1 text-[8px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
+                        <Smartphone className="w-2.5 h-2.5" /> Shopee Ready
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-4 gap-2">
                     {[
                       { name: 'Ranking', icon: ListOrdered, color: 'indigo' },
@@ -1362,18 +1380,35 @@ function App() {
                 <button 
                   onClick={() => handleGenerate()}
                   disabled={isGenerating || !params.topic}
-                  className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 text-base"
+                  className={`w-full py-5 font-black uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex flex-col items-center justify-center gap-1 text-base relative overflow-hidden group ${
+                    (params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0
+                      ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-[0_20px_40px_rgba(249,115,22,0.2)] hover:shadow-[0_20px_40px_rgba(249,115,22,0.4)]'
+                      : 'bg-indigo-600 text-white shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)]'
+                  } hover:scale-[1.02] active:scale-[0.98]`}
                 >
                   {isGenerating ? (
-                    <>
+                    <div className="flex items-center gap-3">
                       <Loader2 className="w-6 h-6 animate-spin" />
                       Brewing Magic...
-                    </>
+                    </div>
                   ) : (
                     <>
-                      <Zap className="w-6 h-6 fill-current" />
-                      Generate Viral Thread
+                      <div className="flex items-center gap-3">
+                        <Zap className="w-6 h-6 fill-current" />
+                        <span>Generate Viral Thread</span>
+                      </div>
+                      {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
+                        <div className="flex items-center gap-1.5 text-[10px] font-black opacity-90 animate-pulse">
+                          <Smartphone className="w-3 h-3" />
+                          SHOPEE AFFILIATE MODE ACTIVE
+                        </div>
+                      )}
                     </>
+                  )}
+                  
+                  {/* Animated Glow Effect for Shopee Mode */}
+                  {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   )}
                 </button>
               </div>

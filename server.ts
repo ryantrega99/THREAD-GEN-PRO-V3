@@ -143,11 +143,14 @@ FORMAT OUTPUT
 - Output langsung thread, tanpa komentar pembuka dari kamu
 
 ═══════════════════════════════
-LINK SHOPEE (KHUSUS)
+LINK SHOPEE (MANDATORY SYSTEM)
 ═══════════════════════════════
-- Jika user memberikan daftar link Shopee, kamu WAJIB memasukkan link tersebut ke dalam utas secara natural.
-- Masukkan link tersebut di utas yang relevan dengan produknya.
-- Jangan menumpuk semua link di satu utas, sebarkan jika memungkinkan.
+- Jika user memberikan daftar link Shopee, kamu WAJIB memasukkan SEMUA link tersebut ke dalam utas.
+- Link Shopee adalah PRIORITAS UTAMA. Utas harus dirancang untuk mempromosikan produk di link tersebut.
+- Masukkan link tersebut di utas yang relevan dengan produknya secara natural.
+- Jika ada banyak link, sebarkan di beberapa utas (misal: satu link per 2-3 utas).
+- Gunakan kalimat ajakan (CTA) yang menarik sebelum link, contoh: "Cek di sini mumpung promo: [link]" atau "Ini link belinya: [link]".
+- JANGAN PERNAH melewatkan satu pun link yang diberikan.
 - Jika link tidak spesifik, gunakan sebagai rekomendasi di akhir utas yang sesuai.
 - Format link: [Nama Produk] (link: [URL]) atau langsung [URL] jika lebih pas.`;
 
