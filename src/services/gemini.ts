@@ -58,11 +58,27 @@ HOOK ALTERNATIF:
 2. [Hook 2]
 `;
 
+function getApiKey(): string {
+  // Check multiple possible locations for the API key
+  const key = 
+    process.env.GEMINI_API_KEY || 
+    process.env.API_KEY || 
+    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+    (import.meta as any).env?.GEMINI_API_KEY;
+
+  if (!key || key === "undefined" || key === "null") {
+    console.error("Gemini API Key missing. Checked process.env.GEMINI_API_KEY, process.env.API_KEY, and import.meta.env.");
+    throw new Error("Gemini API Key tidak ditemukan. Pastikan Anda sudah memasukkan GEMINI_API_KEY di Settings (AI Studio) atau Environment Variables (Vercel).");
+  }
+  
+  // Debug log (obfuscated)
+  console.log(`Gemini API Key found, length: ${key.length}, starts with: ${key.substring(0, 4)}...`);
+  return key;
+}
+
 export async function generateThread(params: ThreadParams): Promise<ThreadResponse> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
-
+    const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}`;
 
@@ -105,9 +121,7 @@ export async function generateThread(params: ThreadParams): Promise<ThreadRespon
 
 export async function fetchTrendingTopics(): Promise<string[]> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
-
+    const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia saat ini. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
 
@@ -128,9 +142,7 @@ export async function fetchTrendingTopics(): Promise<string[]> {
 
 export async function fetchTrendingViaGemini(): Promise<TrendingProduct[]> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
-
+    const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const today = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 
@@ -167,9 +179,7 @@ Berikan TEPAT 6 produk dalam format JSON array berikut, tanpa teks lain:
 
 export async function generateCoverImage(prompt: string): Promise<string> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
-
+    const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',

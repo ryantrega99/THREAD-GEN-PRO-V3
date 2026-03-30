@@ -9,8 +9,12 @@ export default defineConfig(({mode}) => {
     plugins: [react(), tailwindcss()],
     define: {
       'global': 'window',
-      'process.env': '{}',
-      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env': JSON.stringify({
+        NODE_ENV: mode,
+        GEMINI_API_KEY: env.GEMINI_API_KEY || process.env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY,
+        API_KEY: env.API_KEY || process.env.API_KEY || env.VITE_API_KEY,
+        VITE_GEMINI_API_KEY: env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY,
+      }),
       'process.browser': 'true',
     },
     resolve: {

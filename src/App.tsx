@@ -32,7 +32,9 @@ import {
   Hash,
   Calendar,
   MousePointer2,
-  LogIn
+  LogIn,
+  Bug,
+  X
 } from 'lucide-react';
 import { 
   generateThread, 
@@ -210,6 +212,35 @@ function App() {
   const [activeTab, setActiveTab] = useState<'preview' | 'history'>('preview');
   const [viralScore, setViralScore] = useState<number | null>(null);
   const [viralScoreB, setViralScoreB] = useState<number | null>(null);
+
+  const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+
+  useEffect(() => {
+    const checkApiKey = async () => {
+      const key = 
+        process.env.GEMINI_API_KEY || 
+        process.env.API_KEY || 
+        (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+        (import.meta as any).env?.GEMINI_API_KEY;
+
+      if (!key || key === "undefined" || key === "null") {
+        setIsApiKeyMissing(true);
+      } else {
+        setIsApiKeyMissing(false);
+      }
+    };
+    checkApiKey();
+  }, []);
+
+  const handleOpenKeySelection = async () => {
+    if ((window as any).aistudio?.openSelectKey) {
+      await (window as any).aistudio.openSelectKey();
+      // After selection, the page might reload or we might need to check again
+      window.location.reload();
+    } else {
+      alert("Silakan tambahkan GEMINI_API_KEY di menu Settings (ikon roda gigi).");
+    }
+  };
 
   const calculateViralScore = (text: string) => {
     // Simple pseudo-random score based on text length and some keywords
@@ -1076,8 +1107,53 @@ function App() {
     );
   }
 
+  const [showDebug, setShowDebug] = useState(false);
+  const debugInfo = {
+    "process.env.GEMINI_API_KEY": process.env.GEMINI_API_KEY ? `Found (len: ${process.env.GEMINI_API_KEY.length}, starts with: ${process.env.GEMINI_API_KEY.substring(0, 4)}...)` : "Not Found",
+    "process.env.API_KEY": process.env.API_KEY ? `Found (len: ${process.env.API_KEY.length}, starts with: ${process.env.API_KEY.substring(0, 4)}...)` : "Not Found",
+    "import.meta.env.VITE_GEMINI_API_KEY": (import.meta as any).env?.VITE_GEMINI_API_KEY ? `Found (len: ${(import.meta as any).env.VITE_GEMINI_API_KEY.length})` : "Not Found",
+    "NODE_ENV": process.env.NODE_ENV,
+    "isApiKeyMissing": isApiKeyMissing.toString()
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans selection:bg-indigo-600/10">
+      {/* Debug Overlay */}
+      {showDebug && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black tracking-tight">Debug Environment</h3>
+              <button onClick={() => setShowDebug(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4 font-mono text-[10px] bg-slate-50 p-4 rounded-2xl overflow-auto max-h-[60vh]">
+              {Object.entries(debugInfo).map(([key, value]) => (
+                <div key={key} className="flex flex-col gap-1 border-b border-slate-200 pb-2 last:border-0">
+                  <span className="text-indigo-600 font-bold uppercase tracking-widest">{key}</span>
+                  <span className="text-slate-600 break-all">{value}</span>
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={() => setShowDebug(false)}
+              className="w-full mt-6 py-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all active:scale-[0.98]"
+            >
+              Close Debug
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Debug Trigger */}
+      <button 
+        onClick={() => setShowDebug(true)}
+        className="fixed bottom-4 right-4 z-[100] p-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-full shadow-lg hover:bg-white transition-all active:scale-90 opacity-50 hover:opacity-100"
+        title="Debug Env"
+      >
+        <Bug className="w-4 h-4 text-slate-400" />
+      </button>
       <AnimatePresence>
         {showNotification && (
           <motion.div 
@@ -1151,6 +1227,24 @@ function App() {
                   <p className="text-[9px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">Premium Engine v10</p>
                 </div>
               </div>
+
+              {isApiKeyMissing && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <Lock className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">API Key Missing</span>
+                  </div>
+                  <p className="text-[10px] text-red-500 font-bold leading-relaxed">
+                    Gemini API Key tidak ditemukan. Silakan tambahkan di Settings atau klik tombol di bawah.
+                  </p>
+                  <button 
+                    onClick={handleOpenKeySelection}
+                    className="w-full py-2 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-colors"
+                  >
+                    Set API Key
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-8">
                 {/* Trending Section */}
