@@ -145,8 +145,10 @@ FORMAT OUTPUT
 ═══════════════════════════════
 LINK SHOPEE (MANDATORY SYSTEM)
 ═══════════════════════════════
-- Jika user memberikan daftar link Shopee, kamu WAJIB memasukkan SEMUA link tersebut ke dalam utas.
-- Link Shopee adalah PRIORITAS UTAMA. Utas harus dirancang untuk mempromosikan produk di link tersebut.
+- Jika user memberikan daftar link Shopee, kamu WAJIB memprioritaskan konten berdasarkan produk di link tersebut.
+- JANGAN MEMBUAT KONTEN UMUM. Fokuslah pada detail spesifik produk yang ada di link tersebut (fitur, kegunaan, keunggulan).
+- Gunakan informasi detail dari produk tersebut untuk menyusun isi utas.
+- Link Shopee adalah PRIORITAS UTAMA. Utas harus dirancang untuk mempromosikan produk di link tersebut secara mendalam.
 - Masukkan link tersebut di utas yang relevan dengan produknya secara natural.
 - Jika ada banyak link, sebarkan di beberapa utas (misal: satu link per 2-3 utas).
 - Gunakan kalimat ajakan (CTA) yang menarik sebelum link, contoh: "Cek di sini mumpung promo: [link]" atau "Ini link belinya: [link]".
@@ -190,6 +192,7 @@ app.post("/api/generate-thread", async (req, res) => {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
         maxOutputTokens: 2048,
+        tools: [{ urlContext: {} }],
       },
     });
 

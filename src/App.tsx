@@ -1333,7 +1333,7 @@ function App() {
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
                     {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
                       <span className="flex items-center gap-1 text-[8px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
-                        <Smartphone className="w-2.5 h-2.5" /> Shopee Ready
+                        <Smartphone className="w-2.5 h-2.5" /> Shopee Product Focus
                       </span>
                     )}
                   </div>
@@ -1400,7 +1400,7 @@ function App() {
                       {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
                         <div className="flex items-center gap-1.5 text-[10px] font-black opacity-90 animate-pulse">
                           <Smartphone className="w-3 h-3" />
-                          SHOPEE AFFILIATE MODE ACTIVE
+                          SHOPEE PRODUCT FOCUS MODE ACTIVE
                         </div>
                       )}
                     </>
