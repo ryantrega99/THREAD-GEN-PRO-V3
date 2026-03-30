@@ -182,10 +182,10 @@ function App() {
     topic: '',
     length: 'PENDEK',
     tone: 'SANTAI',
-    shopeeLinks: []
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{data: string, mimeType: string} | null>(null);
   const [thread, setThread] = useState<string[]>([]);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [booster, setBooster] = useState<ViralBooster | null>(null);
@@ -193,7 +193,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
   const [slotsLeft, setSlotsLeft] = useState(3);
-  const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, shopeeLinks?: string[], timestamp: number}[]>([]);
+  const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
@@ -334,7 +334,6 @@ function App() {
           tone: data.tone,
           thread: data.thread,
           booster: data.booster,
-          shopeeLinks: data.shopeeLinks || [],
           timestamp: data.createdAt?.toMillis() || Date.now()
         };
       });
@@ -346,7 +345,7 @@ function App() {
     return () => unsubscribe();
   }, [user, isAuthReady]);
 
-  const saveToHistory = async (topic: string, length: string | undefined, tone: string | undefined, thread: string[], booster?: ViralBooster, shopeeLinks?: string[]) => {
+  const saveToHistory = async (topic: string, length: string | undefined, tone: string | undefined, thread: string[], booster?: ViralBooster) => {
     if (!user) return;
 
     const threadId = Date.now().toString();
@@ -360,7 +359,6 @@ function App() {
         tone: tone || 'SANTAI',
         thread,
         booster: booster || null,
-        shopeeLinks: shopeeLinks || [],
         createdAt: serverTimestamp()
       });
     } catch (err) {
@@ -380,12 +378,11 @@ function App() {
     }
   };
 
-  const loadFromHistory = (item: {topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, shopeeLinks?: string[]}) => {
+  const loadFromHistory = (item: {topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster}) => {
     setParams({ 
       topic: item.topic, 
       length: (item.length as any) || 'PENDEK',
-      tone: (item.tone as any) || 'SANTAI',
-      shopeeLinks: item.shopeeLinks || []
+      tone: (item.tone as any) || 'SANTAI'
     });
     setThread(item.thread);
     setBooster(item.booster || null);
@@ -429,8 +426,24 @@ function App() {
   const [threadB, setThreadB] = useState<string[]>([]);
   const [isGeneratingB, setIsGeneratingB] = useState(false);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        const data = base64String.split(',')[1];
+        setSelectedImage({
+          data,
+          mimeType: file.type
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleGenerate = async (isVersionB = false) => {
-    if (!params.topic) return;
+    if (!params.topic && !selectedImage) return;
 
     if (isVersionB) setIsGeneratingB(true);
     else setIsGenerating(true);
@@ -444,14 +457,12 @@ function App() {
     }
     
     try {
-      const filteredShopeeLinks = (params.shopeeLinks || []).filter(link => link.trim() !== '');
-      
       const response = await fetch('/api/generate-thread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...params,
-          shopeeLinks: filteredShopeeLinks,
+          image: selectedImage,
           topic: isVersionB ? `${params.topic} (Buat versi alternatif yang berbeda gaya)` : params.topic
         })
       });
@@ -471,35 +482,7 @@ function App() {
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
-        let sanitizedTweets = (result.tweets || []).map(t => t.trim());
-        
-        // Fail-safe: Ensure Shopee links are in the output and remove hallucinated ones
-        const filteredShopeeLinks = (params.shopeeLinks || []).filter(link => link.trim() !== '');
-        if (filteredShopeeLinks.length > 0) {
-          // 1. Remove hallucinated Shopee links (links that look like shopee but aren't in the list)
-          sanitizedTweets = sanitizedTweets.map(tweet => {
-            let cleanedTweet = tweet;
-            const shopeeLinkRegex = /https?:\/\/(?:shope\.ee|shopee\.co\.id)\/[^\s)]+/gi;
-            const foundLinks = tweet.match(shopeeLinkRegex) || [];
-            
-            foundLinks.forEach(link => {
-              const isOriginal = filteredShopeeLinks.some(orig => link.toLowerCase().includes(orig.toLowerCase()) || orig.toLowerCase().includes(link.toLowerCase()));
-              if (!isOriginal) {
-                cleanedTweet = cleanedTweet.replace(link, '[Link tidak valid dihapus]');
-              }
-            });
-            return cleanedTweet;
-          });
-
-          // 2. Append missing original links
-          const allOutputText = sanitizedTweets.join(' ').toLowerCase();
-          const missingLinks = filteredShopeeLinks.filter(link => !allOutputText.includes(link.toLowerCase()));
-          
-          if (missingLinks.length > 0 && sanitizedTweets.length > 0) {
-            const lastIndex = sanitizedTweets.length - 1;
-            sanitizedTweets[lastIndex] = `${sanitizedTweets[lastIndex]}\n\n🛒 Cek di sini:\n${missingLinks.join('\n')}`;
-          }
-        }
+        const sanitizedTweets = (result.tweets || []).map(t => t.trim());
         
         if (isVersionB) {
           setThreadB(sanitizedTweets);
@@ -518,7 +501,7 @@ function App() {
           setThread(sanitizedTweets);
           setViralScore(calculateViralScore(sanitizedTweets.join(' ')));
           setBooster(result.booster || null);
-          saveToHistory(params.topic, params.length, params.tone, sanitizedTweets, result.booster, params.shopeeLinks);
+          saveToHistory(params.topic, params.length, params.tone, sanitizedTweets, result.booster);
           
           if (isABTesting) {
             handleGenerate(true);
@@ -572,7 +555,7 @@ function App() {
   };
 
   const reset = () => {
-    setParams({ topic: '', length: 'PENDEK', shopeeLinks: [] });
+    setParams({ topic: '', length: 'PENDEK' });
     setThread([]);
     setCoverImage(null);
     setBooster(null);
@@ -1258,101 +1241,45 @@ function App() {
                       <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{params.topic.length} chars</span>
                     </div>
                   </div>
-                </div>
 
-                {/* Shopee Links Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Shopee Links</label>
-                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded-md uppercase tracking-widest">{params.shopeeLinks?.length || 0}/5</span>
-                    </div>
-                    {(params.shopeeLinks?.length || 0) > 0 && (
-                      <button 
-                        onClick={() => setParams({ ...params, shopeeLinks: [] })}
-                        className="text-[10px] font-black text-red-500 hover:text-red-600 uppercase tracking-widest transition-colors"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {(params.shopeeLinks || []).map((link, index) => (
-                      <motion.div 
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        key={index} 
-                        className="flex gap-2 group/link"
-                      >
-                        <div className="relative flex-1">
+                  {/* Image Upload Field */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Upload Screenshot/Foto Produk (Vision AI)</label>
+                    <div className="flex items-center gap-4">
+                      <label className="flex-1 cursor-pointer">
+                        <div className="w-full p-4 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-indigo-100 transition-all">
+                          <Smartphone className="w-6 h-6 text-indigo-500" />
+                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Pilih Foto</span>
                           <input 
-                            type="url"
-                            placeholder="https://shope.ee/..."
-                            className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-100 focus:border-indigo-600 focus:bg-white rounded-2xl transition-all outline-none text-xs font-medium shadow-sm"
-                            value={link}
-                            onChange={(e) => {
-                              const newLinks = [...(params.shopeeLinks || [])];
-                              newLinks[index] = e.target.value;
-                              setParams({ ...params, shopeeLinks: newLinks });
-                            }}
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleImageChange}
                           />
-                          <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within/link:text-indigo-500 transition-colors" />
                         </div>
-                        <button 
-                          onClick={() => {
-                            const newLinks = (params.shopeeLinks || []).filter((_, i) => i !== index);
-                            setParams({ ...params, shopeeLinks: newLinks });
-                          }}
-                          className="p-3.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </motion.div>
-                    ))}
-                    
-                    {(params.shopeeLinks?.length || 0) < 5 && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <button 
-                          onClick={() => setParams({ ...params, shopeeLinks: [...(params.shopeeLinks || []), ''] })}
-                          className="py-3.5 border-2 border-dashed border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2"
-                        >
-                          <Sparkles className="w-3 h-3" /> Tambah Satu
-                        </button>
-                        <button 
-                          onClick={async () => {
-                            try {
-                              const text = await navigator.clipboard.readText();
-                              const urls: string[] = text.match(/https?:\/\/[^\s]+/g) || [];
-                              const shopeeUrls = urls.filter(u => u.includes('shopee') || u.includes('shope.ee')).slice(0, 5);
-                              if (shopeeUrls.length > 0) {
-                                setParams({ ...params, shopeeLinks: shopeeUrls });
-                                showToast(`${shopeeUrls.length} link Shopee terdeteksi!`);
-                              } else {
-                                showToast("Tidak ada link Shopee di clipboard.");
-                              }
-                            } catch (err) {
-                              showToast("Gagal membaca clipboard.");
-                            }
-                          }}
-                          className="py-3.5 border-2 border-dashed border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2"
-                        >
-                          <Copy className="w-3 h-3" /> Paste All
-                        </button>
-                      </div>
-                    )}
+                      </label>
+                      {selectedImage && (
+                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-indigo-500">
+                          <img 
+                            src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`} 
+                            className="w-full h-full object-cover"
+                            alt="Preview"
+                          />
+                          <button 
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
+                {/* Model Selection Grid */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
-                    {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
-                      <span className="flex items-center gap-1 text-[8px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
-                        <Smartphone className="w-2.5 h-2.5" /> Shopee Product Focus
-                      </span>
-                    )}
-                  </div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
                   <div className="grid grid-cols-4 gap-2">
                     {[
                       { name: 'Ranking', icon: ListOrdered, color: 'indigo' },
@@ -1396,35 +1323,18 @@ function App() {
                 <button 
                   onClick={() => handleGenerate()}
                   disabled={isGenerating || !params.topic}
-                  className={`w-full py-5 font-black uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex flex-col items-center justify-center gap-1 text-base relative overflow-hidden group ${
-                    (params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0
-                      ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-[0_20px_40px_rgba(249,115,22,0.2)] hover:shadow-[0_20px_40px_rgba(249,115,22,0.4)]'
-                      : 'bg-indigo-600 text-white shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)]'
-                  } hover:scale-[1.02] active:scale-[0.98]`}
+                  className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 text-base"
                 >
                   {isGenerating ? (
-                    <div className="flex items-center gap-3">
+                    <>
                       <Loader2 className="w-6 h-6 animate-spin" />
                       Brewing Magic...
-                    </div>
+                    </>
                   ) : (
                     <>
-                      <div className="flex items-center gap-3">
-                        <Zap className="w-6 h-6 fill-current" />
-                        <span>Generate Viral Thread</span>
-                      </div>
-                      {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-black opacity-90 animate-pulse">
-                          <Smartphone className="w-3 h-3" />
-                          SHOPEE PRODUCT FOCUS MODE ACTIVE
-                        </div>
-                      )}
+                      <Zap className="w-6 h-6 fill-current" />
+                      Generate Viral Thread
                     </>
-                  )}
-                  
-                  {/* Animated Glow Effect for Shopee Mode */}
-                  {(params.shopeeLinks || []).filter(l => l.trim() !== '').length > 0 && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   )}
                 </button>
               </div>

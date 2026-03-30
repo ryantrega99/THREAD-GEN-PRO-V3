@@ -140,25 +140,7 @@ FORMAT OUTPUT
 - Tidak pakai bullet point di dalam utas
 - Tidak pakai hashtag berlebihan
 - Panjang per utas: 2–6 kalimat, tidak bertele-tele
-- Output langsung thread, tanpa komentar pembuka dari kamu
-
-═══════════════════════════════
-LINK SHOPEE (MANDATORY SYSTEM)
-═══════════════════════════════
-- Jika user memberikan daftar link Shopee, kamu WAJIB memprioritaskan konten berdasarkan produk di link tersebut.
-- JANGAN MEMBUAT KONTEN UMUM. Fokuslah pada detail spesifik produk yang ada di link tersebut (fitur, kegunaan, keunggulan).
-- Gunakan informasi detail dari produk tersebut untuk menyusun isi utas.
-- **DILARANG KERAS** menggunakan link Shopee lain yang tidak ada dalam daftar yang diberikan user.
-- **DILARANG KERAS** mengarang atau menghalusinasi link Shopee baru.
-- **HANYA GUNAKAN** link yang diberikan secara eksklusif.
-- **DILARANG KERAS** membuat link Shopee sendiri atau menggunakan link placeholder jika user sudah memberikan daftar link.
-- Link Shopee adalah PRIORITAS UTAMA. Utas harus dirancang untuk mempromosikan produk di link tersebut secara mendalam.
-- Masukkan link tersebut di utas yang relevan dengan produknya secara natural.
-- Jika ada banyak link, sebarkan di beberapa utas (misal: satu link per 2-3 utas).
-- Gunakan kalimat ajakan (CTA) yang menarik sebelum link, contoh: "Cek di sini mumpung promo: [link]" atau "Ini link belinya: [link]".
-- JANGAN PERNAH melewatkan satu pun link yang diberikan.
-- Jika link tidak spesifik, gunakan sebagai rekomendasi di akhir utas yang sesuai.
-- Format link: [Nama Produk] (link: [URL]) atau langsung [URL] jika lebih pas.`;
+- Output langsung thread, tanpa komentar pembuka dari kamu`;
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -175,7 +157,7 @@ app.get("/api/health", (req, res) => {
 // API Route for Thread Generation
 app.post("/api/generate-thread", async (req, res) => {
   try {
-    const params = req.body;
+    const { topic, length, tone, image } = req.body;
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey || apiKey.trim() === "") {
@@ -183,20 +165,28 @@ app.post("/api/generate-thread", async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    let prompt = `BUAT UTAS TENTANG: ${params.topic}`;
     
-    if (params.shopeeLinks && params.shopeeLinks.length > 0) {
-      prompt += `\n\nBERIKUT ADALAH LINK SHOPEE YANG WAJIB DIMASUKKAN KE DALAM UTAS SECARA NATURAL (SEBARKAN DI UTAS YANG RELEVAN):\n${params.shopeeLinks.join('\n')}\n\n**CATATAN PENTING:** DILARANG KERAS menggunakan link Shopee lain selain yang ada di daftar di atas. Fokuslah pada detail produk yang ada di link tersebut.`;
+    const parts: any[] = [];
+    
+    if (image) {
+      parts.push({
+        inlineData: {
+          mimeType: image.mimeType || "image/jpeg",
+          data: image.data
+        }
+      });
+      parts.push({ text: `Analisis gambar produk ini (ekstrak nama, harga, rating, deskripsi unik) dan buatkan thread sesuai topik: ${topic || 'Review produk ini'}` });
+    } else {
+      parts.push({ text: topic });
     }
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
         maxOutputTokens: 2048,
-        tools: [{ urlContext: {} }],
       },
     });
 
