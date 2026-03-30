@@ -471,11 +471,27 @@ function App() {
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
-        const sanitizedTweets = (result.tweets || []).map(t => t.trim());
+        let sanitizedTweets = (result.tweets || []).map(t => t.trim());
         
-        // Fail-safe: Ensure Shopee links are in the output
+        // Fail-safe: Ensure Shopee links are in the output and remove hallucinated ones
         const filteredShopeeLinks = (params.shopeeLinks || []).filter(link => link.trim() !== '');
         if (filteredShopeeLinks.length > 0) {
+          // 1. Remove hallucinated Shopee links (links that look like shopee but aren't in the list)
+          sanitizedTweets = sanitizedTweets.map(tweet => {
+            let cleanedTweet = tweet;
+            const shopeeLinkRegex = /https?:\/\/(?:shope\.ee|shopee\.co\.id)\/[^\s)]+/gi;
+            const foundLinks = tweet.match(shopeeLinkRegex) || [];
+            
+            foundLinks.forEach(link => {
+              const isOriginal = filteredShopeeLinks.some(orig => link.toLowerCase().includes(orig.toLowerCase()) || orig.toLowerCase().includes(link.toLowerCase()));
+              if (!isOriginal) {
+                cleanedTweet = cleanedTweet.replace(link, '[Link tidak valid dihapus]');
+              }
+            });
+            return cleanedTweet;
+          });
+
+          // 2. Append missing original links
           const allOutputText = sanitizedTweets.join(' ').toLowerCase();
           const missingLinks = filteredShopeeLinks.filter(link => !allOutputText.includes(link.toLowerCase()));
           

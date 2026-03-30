@@ -148,6 +148,10 @@ LINK SHOPEE (MANDATORY SYSTEM)
 - Jika user memberikan daftar link Shopee, kamu WAJIB memprioritaskan konten berdasarkan produk di link tersebut.
 - JANGAN MEMBUAT KONTEN UMUM. Fokuslah pada detail spesifik produk yang ada di link tersebut (fitur, kegunaan, keunggulan).
 - Gunakan informasi detail dari produk tersebut untuk menyusun isi utas.
+- **DILARANG KERAS** menggunakan link Shopee lain yang tidak ada dalam daftar yang diberikan user.
+- **DILARANG KERAS** mengarang atau menghalusinasi link Shopee baru.
+- **HANYA GUNAKAN** link yang diberikan secara eksklusif.
+- **DILARANG KERAS** membuat link Shopee sendiri atau menggunakan link placeholder jika user sudah memberikan daftar link.
 - Link Shopee adalah PRIORITAS UTAMA. Utas harus dirancang untuk mempromosikan produk di link tersebut secara mendalam.
 - Masukkan link tersebut di utas yang relevan dengan produknya secara natural.
 - Jika ada banyak link, sebarkan di beberapa utas (misal: satu link per 2-3 utas).
@@ -182,7 +186,7 @@ app.post("/api/generate-thread", async (req, res) => {
     let prompt = `BUAT UTAS TENTANG: ${params.topic}`;
     
     if (params.shopeeLinks && params.shopeeLinks.length > 0) {
-      prompt += `\n\nBERIKUT ADALAH LINK SHOPEE YANG WAJIB DIMASUKKAN KE DALAM UTAS SECARA NATURAL (SEBARKAN DI UTAS YANG RELEVAN):\n${params.shopeeLinks.join('\n')}`;
+      prompt += `\n\nBERIKUT ADALAH LINK SHOPEE YANG WAJIB DIMASUKKAN KE DALAM UTAS SECARA NATURAL (SEBARKAN DI UTAS YANG RELEVAN):\n${params.shopeeLinks.join('\n')}\n\n**CATATAN PENTING:** DILARANG KERAS menggunakan link Shopee lain selain yang ada di daftar di atas. Fokuslah pada detail produk yang ada di link tersebut.`;
     }
 
     const response = await ai.models.generateContent({
