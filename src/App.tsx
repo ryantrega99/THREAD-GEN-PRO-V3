@@ -182,6 +182,7 @@ function App() {
     topic: '',
     length: 'PENDEK',
     tone: 'SANTAI',
+    shopeeLinks: []
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -192,7 +193,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
   const [slotsLeft, setSlotsLeft] = useState(3);
-  const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
+  const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, shopeeLinks?: string[], timestamp: number}[]>([]);
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
@@ -333,6 +334,7 @@ function App() {
           tone: data.tone,
           thread: data.thread,
           booster: data.booster,
+          shopeeLinks: data.shopeeLinks || [],
           timestamp: data.createdAt?.toMillis() || Date.now()
         };
       });
@@ -344,7 +346,7 @@ function App() {
     return () => unsubscribe();
   }, [user, isAuthReady]);
 
-  const saveToHistory = async (topic: string, length: string | undefined, tone: string | undefined, thread: string[], booster?: ViralBooster) => {
+  const saveToHistory = async (topic: string, length: string | undefined, tone: string | undefined, thread: string[], booster?: ViralBooster, shopeeLinks?: string[]) => {
     if (!user) return;
 
     const threadId = Date.now().toString();
@@ -358,6 +360,7 @@ function App() {
         tone: tone || 'SANTAI',
         thread,
         booster: booster || null,
+        shopeeLinks: shopeeLinks || [],
         createdAt: serverTimestamp()
       });
     } catch (err) {
@@ -377,11 +380,12 @@ function App() {
     }
   };
 
-  const loadFromHistory = (item: {topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster}) => {
+  const loadFromHistory = (item: {topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, shopeeLinks?: string[]}) => {
     setParams({ 
       topic: item.topic, 
       length: (item.length as any) || 'PENDEK',
-      tone: (item.tone as any) || 'SANTAI'
+      tone: (item.tone as any) || 'SANTAI',
+      shopeeLinks: item.shopeeLinks || []
     });
     setThread(item.thread);
     setBooster(item.booster || null);
@@ -440,11 +444,14 @@ function App() {
     }
     
     try {
+      const filteredShopeeLinks = (params.shopeeLinks || []).filter(link => link.trim() !== '');
+      
       const response = await fetch('/api/generate-thread', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...params,
+          shopeeLinks: filteredShopeeLinks,
           topic: isVersionB ? `${params.topic} (Buat versi alternatif yang berbeda gaya)` : params.topic
         })
       });
@@ -483,7 +490,7 @@ function App() {
           setThread(sanitizedTweets);
           setViralScore(calculateViralScore(sanitizedTweets.join(' ')));
           setBooster(result.booster || null);
-          saveToHistory(params.topic, params.length, params.tone, sanitizedTweets, result.booster);
+          saveToHistory(params.topic, params.length, params.tone, sanitizedTweets, result.booster, params.shopeeLinks);
           
           if (isABTesting) {
             handleGenerate(true);
@@ -537,7 +544,7 @@ function App() {
   };
 
   const reset = () => {
-    setParams({ topic: '', length: 'PENDEK' });
+    setParams({ topic: '', length: 'PENDEK', shopeeLinks: [] });
     setThread([]);
     setCoverImage(null);
     setBooster(null);
@@ -1222,6 +1229,90 @@ function App() {
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{params.topic.length} chars</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Shopee Links Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Shopee Links</label>
+                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[8px] font-black rounded-md uppercase tracking-widest">{params.shopeeLinks?.length || 0}/5</span>
+                    </div>
+                    {(params.shopeeLinks?.length || 0) > 0 && (
+                      <button 
+                        onClick={() => setParams({ ...params, shopeeLinks: [] })}
+                        className="text-[10px] font-black text-red-500 hover:text-red-600 uppercase tracking-widest transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {(params.shopeeLinks || []).map((link, index) => (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        key={index} 
+                        className="flex gap-2 group/link"
+                      >
+                        <div className="relative flex-1">
+                          <input 
+                            type="url"
+                            placeholder="https://shope.ee/..."
+                            className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-100 focus:border-indigo-600 focus:bg-white rounded-2xl transition-all outline-none text-xs font-medium shadow-sm"
+                            value={link}
+                            onChange={(e) => {
+                              const newLinks = [...(params.shopeeLinks || [])];
+                              newLinks[index] = e.target.value;
+                              setParams({ ...params, shopeeLinks: newLinks });
+                            }}
+                          />
+                          <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within/link:text-indigo-500 transition-colors" />
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const newLinks = (params.shopeeLinks || []).filter((_, i) => i !== index);
+                            setParams({ ...params, shopeeLinks: newLinks });
+                          }}
+                          className="p-3.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    ))}
+                    
+                    {(params.shopeeLinks?.length || 0) < 5 && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={() => setParams({ ...params, shopeeLinks: [...(params.shopeeLinks || []), ''] })}
+                          className="py-3.5 border-2 border-dashed border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Sparkles className="w-3 h-3" /> Tambah Satu
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const text = await navigator.clipboard.readText();
+                              const urls: string[] = text.match(/https?:\/\/[^\s]+/g) || [];
+                              const shopeeUrls = urls.filter(u => u.includes('shopee') || u.includes('shope.ee')).slice(0, 5);
+                              if (shopeeUrls.length > 0) {
+                                setParams({ ...params, shopeeLinks: shopeeUrls });
+                                showToast(`${shopeeUrls.length} link Shopee terdeteksi!`);
+                              } else {
+                                showToast("Tidak ada link Shopee di clipboard.");
+                              }
+                            } catch (err) {
+                              showToast("Gagal membaca clipboard.");
+                            }
+                          }}
+                          className="py-3.5 border-2 border-dashed border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Copy className="w-3 h-3" /> Paste All
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

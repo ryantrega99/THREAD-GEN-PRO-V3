@@ -140,7 +140,16 @@ FORMAT OUTPUT
 - Tidak pakai bullet point di dalam utas
 - Tidak pakai hashtag berlebihan
 - Panjang per utas: 2–6 kalimat, tidak bertele-tele
-- Output langsung thread, tanpa komentar pembuka dari kamu`;
+- Output langsung thread, tanpa komentar pembuka dari kamu
+
+═══════════════════════════════
+LINK SHOPEE (KHUSUS)
+═══════════════════════════════
+- Jika user memberikan daftar link Shopee, kamu WAJIB memasukkan link tersebut ke dalam utas secara natural.
+- Masukkan link tersebut di utas yang relevan dengan produknya.
+- Jangan menumpuk semua link di satu utas, sebarkan jika memungkinkan.
+- Jika link tidak spesifik, gunakan sebagai rekomendasi di akhir utas yang sesuai.
+- Format link: [Nama Produk] (link: [URL]) atau langsung [URL] jika lebih pas.`;
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -165,7 +174,11 @@ app.post("/api/generate-thread", async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = params.topic;
+    let prompt = `BUAT UTAS TENTANG: ${params.topic}`;
+    
+    if (params.shopeeLinks && params.shopeeLinks.length > 0) {
+      prompt += `\n\nBERIKUT ADALAH LINK SHOPEE YANG WAJIB DIMASUKKAN KE DALAM UTAS SECARA NATURAL (SEBARKAN DI UTAS YANG RELEVAN):\n${params.shopeeLinks.join('\n')}`;
+    }
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",

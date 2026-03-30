@@ -22,6 +22,7 @@ service cloud.firestore {
     //   - thread: list (required) - Array of tweets
     //   - tone: string (optional) - Tone used
     //   - booster: map (optional) - Viral booster info
+    //   - shopeeLinks: list (optional) - Shopee links included
     //   - createdAt: timestamp (required) - Creation timestamp
     //
     // ===============================================================
@@ -68,12 +69,13 @@ service cloud.firestore {
     }
 
     function isValidThread(data) {
-      return hasOnlyAllowedFields(['uid', 'topic', 'thread', 'tone', 'booster', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'topic', 'thread', 'tone', 'booster', 'shopeeLinks', 'createdAt']) &&
              data.uid is string && data.uid == request.auth.uid &&
              data.topic is string && data.topic.size() > 0 && data.topic.size() < 500 &&
              data.thread is list && data.thread.size() > 0 && data.thread.size() < 50 &&
              (!('tone' in data) || (data.tone is string && data.tone in ['GALAK', 'SANTAI', 'MOTIVASI', 'HUMOR', 'HANIFMUH'])) &&
              (!('booster' in data) || data.booster is map) &&
+             (!('shopeeLinks' in data) || (data.shopeeLinks is list && data.shopeeLinks.size() <= 5)) &&
              data.createdAt is timestamp;
     }
 

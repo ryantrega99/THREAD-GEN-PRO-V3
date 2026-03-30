@@ -4,6 +4,7 @@ export interface ThreadParams {
   topic: string;
   length?: 'PENDEK' | 'PANJANG' | 'REKOMENDASI';
   tone?: 'GALAK' | 'SANTAI' | 'MOTIVASI' | 'HUMOR' | 'HANIFMUH';
+  shopeeLinks?: string[];
 }
 
 export interface ViralBooster {
