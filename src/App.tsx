@@ -34,7 +34,15 @@ import {
   MousePointer2,
   LogIn
 } from 'lucide-react';
-import type { ThreadParams, ViralBooster } from './services/gemini';
+import { 
+  generateThread, 
+  generateCoverImage, 
+  fetchTrendingTopics, 
+  fetchTrendingViaGemini,
+  TrendingProduct,
+  ThreadParams,
+  ViralBooster
+} from './services/gemini';
 import { auth, db } from './lib/firebase';
 import { 
   GoogleAuthProvider, 
@@ -169,6 +177,7 @@ export default function AppWrapper() {
   );
 }
 
+// App component
 function App() {
   const [view, setView] = useState<ViewState>('landing');
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -181,11 +190,10 @@ function App() {
   const [params, setParams] = useState<ThreadParams>({
     topic: '',
     length: 'PENDEK',
-    tone: 'SANTAI',
+    tone: 'SANTAI'
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<{data: string, mimeType: string} | null>(null);
   const [thread, setThread] = useState<string[]>([]);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [booster, setBooster] = useState<ViralBooster | null>(null);
@@ -195,8 +203,10 @@ function App() {
   const [slotsLeft, setSlotsLeft] = useState(3);
   const [history, setHistory] = useState<{id: string, topic: string, length?: string, tone?: string, thread: string[], booster?: ViralBooster, timestamp: number}[]>([]);
   const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<TrendingProduct[]>([]);
   const [trendingTimestamp, setTrendingTimestamp] = useState<number | null>(null);
   const [isFetchingTrending, setIsFetchingTrending] = useState(false);
+  const [isFetchingProducts, setIsFetchingProducts] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'history'>('preview');
   const [viralScore, setViralScore] = useState<number | null>(null);
   const [viralScoreB, setViralScoreB] = useState<number | null>(null);
@@ -209,24 +219,12 @@ function App() {
     return Math.min(base + lengthBonus + randomFactor, 99);
   };
 
-  const fetchTrendingTopics = async () => {
+  const fetchTrendingTopicsList = async () => {
     setIsFetchingTrending(true);
     try {
-      const response = await fetch('/api/trending-topics');
-      if (!response.ok) {
-        let errMsg = "Gagal mengambil trending topics.";
-        try {
-          const errData = await response.json();
-          errMsg = errData.error || errMsg;
-        } catch (e) {
-          errMsg = `Server Error (${response.status})`;
-        }
-        throw new Error(errMsg);
-      }
-
-      const data = await response.json();
-      if (data.topics && data.topics.length > 0) {
-        setTrendingTopics(data.topics);
+      const topics = await fetchTrendingTopics();
+      if (topics && topics.length > 0) {
+        setTrendingTopics(topics);
         setTrendingTimestamp(Date.now());
       } else {
         setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
@@ -240,6 +238,41 @@ function App() {
       setIsFetchingTrending(false);
     }
   };
+
+  const fetchTrendingProductsList = async (force = false) => {
+    setIsFetchingProducts(true);
+    try {
+      // Fetch from both sources in parallel
+      const [geminiRes, shopeeRes] = await Promise.allSettled([
+        fetchTrendingViaGemini(),
+        fetch("/api/shopee/trending").then(r => r.json())
+      ]);
+
+      const geminiProducts = geminiRes.status === "fulfilled" ? geminiRes.value : [];
+      const shopeeProducts = shopeeRes.status === "fulfilled" && shopeeRes.value.success 
+        ? shopeeRes.value.data.map((p: any) => ({
+            name: p.name,
+            category: "Shopee Winning",
+            reason: `${p.sold.toLocaleString()} terjual bulan ini`,
+            priceRange: p.priceFormatted,
+            source: "shopee"
+          }))
+        : [];
+
+      // Merge and shuffle slightly
+      const merged = [...geminiProducts, ...shopeeProducts].sort(() => Math.random() - 0.5);
+      setTrendingProducts(merged.slice(0, 8));
+    } catch (err) {
+      console.error("Fetch products error:", err);
+    } finally {
+      setIsFetchingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrendingTopicsList();
+    fetchTrendingProductsList();
+  }, []);
 
   useEffect(() => {
     const savedAccess = localStorage.getItem('threadgen_pro_access');
@@ -426,24 +459,8 @@ function App() {
   const [threadB, setThreadB] = useState<string[]>([]);
   const [isGeneratingB, setIsGeneratingB] = useState(false);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        const data = base64String.split(',')[1];
-        setSelectedImage({
-          data,
-          mimeType: file.type
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleGenerate = async (isVersionB = false) => {
-    if (!params.topic && !selectedImage) return;
+    if (!params.topic) return;
 
     if (isVersionB) setIsGeneratingB(true);
     else setIsGenerating(true);
@@ -457,32 +474,15 @@ function App() {
     }
     
     try {
-      const response = await fetch('/api/generate-thread', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...params,
-          image: selectedImage,
-          topic: isVersionB ? `${params.topic} (Buat versi alternatif yang berbeda gaya)` : params.topic
-        })
+      const result = await generateThread({
+        ...params,
+        topic: isVersionB ? `${params.topic} (Buat versi alternatif yang berbeda gaya)` : params.topic
       });
 
-      if (!response.ok) {
-        let errMsg = 'Gagal generate thread';
-        try {
-          const errData = await response.json();
-          errMsg = errData.error || errMsg;
-        } catch (e) {
-          errMsg = `Server Error (${response.status}): ${response.statusText}`;
-        }
-        throw new Error(errMsg);
-      }
-
-      const result = await response.json();
       if (result.tweets.length === 0) {
         setError("Gagal meracik thread. Coba ganti topik atau detailnya ya!");
       } else {
-        const sanitizedTweets = (result.tweets || []).map(t => t.trim());
+        let sanitizedTweets = (result.tweets || []).map(t => t.trim());
         
         if (isVersionB) {
           setThreadB(sanitizedTweets);
@@ -495,7 +495,7 @@ function App() {
           if (imageMatch) {
             const imagePrompt = imageMatch[1].trim();
             result.tweets[0] = firstTweet.replace(/\[GAMBAR\]:.*\n?/i, '').trim();
-            generateCoverImage(imagePrompt);
+            handleGenerateCoverImage(imagePrompt);
           }
 
           setThread(sanitizedTweets);
@@ -517,29 +517,12 @@ function App() {
     }
   };
 
-  const generateCoverImage = async (prompt: string) => {
+  const handleGenerateCoverImage = async (prompt: string) => {
     setIsGeneratingImage(true);
     try {
-      const response = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-
-      if (!response.ok) {
-        let errMsg = 'Gagal generate gambar';
-        try {
-          const errData = await response.json();
-          errMsg = errData.error || errMsg;
-        } catch (e) {
-          errMsg = `Server Error (${response.status})`;
-        }
-        throw new Error(errMsg);
-      }
-
-      const data = await response.json();
-      if (data.image) {
-        setCoverImage(`data:image/png;base64,${data.image}`);
+      const base64 = await generateCoverImage(prompt);
+      if (base64) {
+        setCoverImage(`data:image/png;base64,${base64}`);
       }
     } catch (err) {
       console.error("Failed to generate image:", err);
@@ -1181,7 +1164,7 @@ function App() {
                       </div>
                     </div>
                     <button 
-                      onClick={fetchTrendingTopics}
+                      onClick={fetchTrendingTopicsList}
                       disabled={isFetchingTrending}
                       className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors disabled:opacity-50 uppercase tracking-widest"
                     >
@@ -1208,6 +1191,56 @@ function App() {
                     ) : (
                       <div className="w-full p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-center">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No trending data</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Trending Products Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Trending Products</label>
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/10 rounded-full">
+                        <Sparkles className="w-2 h-2 text-orange-500" />
+                        <span className="text-[8px] font-black text-orange-600 uppercase tracking-widest">Hot</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => fetchTrendingProductsList(true)}
+                      disabled={isFetchingProducts}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors disabled:opacity-50 uppercase tracking-widest"
+                    >
+                      {isFetchingProducts ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                      Refresh
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    {trendingProducts.length > 0 ? (
+                      trendingProducts.map((product, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setParams({ ...params, topic: `Ranking: ${product.name} (${product.category}) - kenapa ini viral? ${product.reason}` })}
+                          className="p-3 text-left bg-gray-50 border border-gray-100 rounded-2xl hover:bg-indigo-50 hover:border-indigo-100 transition-all group"
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{product.category}</span>
+                            <span className="text-[8px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-100">{product.source}</span>
+                          </div>
+                          <h4 className="text-xs font-black text-gray-800 group-hover:text-indigo-700 transition-colors line-clamp-1">{product.name}</h4>
+                          <p className="text-[9px] text-gray-500 mt-1 line-clamp-1 italic">{product.reason}</p>
+                          {product.priceRange && (
+                            <div className="mt-2 flex items-center gap-1">
+                              <Wallet className="w-2.5 h-2.5 text-gray-400" />
+                              <span className="text-[9px] font-bold text-gray-400">{product.priceRange}</span>
+                            </div>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="w-full p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-center">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No product data</p>
                       </div>
                     )}
                   </div>
@@ -1241,45 +1274,12 @@ function App() {
                       <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{params.topic.length} chars</span>
                     </div>
                   </div>
-
-                  {/* Image Upload Field */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Upload Screenshot/Foto Produk (Vision AI)</label>
-                    <div className="flex items-center gap-4">
-                      <label className="flex-1 cursor-pointer">
-                        <div className="w-full p-4 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-indigo-100 transition-all">
-                          <Smartphone className="w-6 h-6 text-indigo-500" />
-                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Pilih Foto</span>
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            onChange={handleImageChange}
-                          />
-                        </div>
-                      </label>
-                      {selectedImage && (
-                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-indigo-500">
-                          <img 
-                            src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`} 
-                            className="w-full h-full object-cover"
-                            alt="Preview"
-                          />
-                          <button 
-                            onClick={() => setSelectedImage(null)}
-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-lg"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
-                {/* Model Selection Grid */}
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
+                  </div>
                   <div className="grid grid-cols-4 gap-2">
                     {[
                       { name: 'Ranking', icon: ListOrdered, color: 'indigo' },
@@ -1323,18 +1323,18 @@ function App() {
                 <button 
                   onClick={() => handleGenerate()}
                   disabled={isGenerating || !params.topic}
-                  className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 text-base"
+                  className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex flex-col items-center justify-center gap-1 text-base relative overflow-hidden group"
                 >
                   {isGenerating ? (
-                    <>
+                    <div className="flex items-center gap-3">
                       <Loader2 className="w-6 h-6 animate-spin" />
                       Brewing Magic...
-                    </>
+                    </div>
                   ) : (
-                    <>
+                    <div className="flex items-center gap-3">
                       <Zap className="w-6 h-6 fill-current" />
-                      Generate Viral Thread
-                    </>
+                      <span>Generate Viral Thread</span>
+                    </div>
                   )}
                 </button>
               </div>

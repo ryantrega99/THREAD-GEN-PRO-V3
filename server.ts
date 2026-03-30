@@ -1,265 +1,145 @@
 import "dotenv/config";
 import express from "express";
-import { GoogleGenAI } from "@google/genai";
+import path from "path";
+import {
+  searchWinningProducts,
+  getTopSellingByCategory,
+  getFlashSaleWinners,
+  scanWinningProducts,
+  SHOPEE_CATEGORIES,
+} from "./shopee-winning";
 
 const app = express();
 app.use(express.json());
 
 // Diagnostic log for server start
 console.log("Server starting... VERCEL:", !!process.env.VERCEL, "NODE_ENV:", process.env.NODE_ENV);
-console.log("GEMINI_API_KEY present:", !!process.env.GEMINI_API_KEY);
 
-const SYSTEM_INSTRUCTION = `Kamu adalah ThreadGen, asisten khusus untuk membuat konten thread Threads Indonesia.
+// ── Shopee Scraper Engine (Backend to avoid CORS) ─────────────
+// Using a search-based approach which is more stable than internal recommendation APIs
+async function fetchTrendingViaShopee(): Promise<any[]> {
+  try {
+    const url = "https://shopee.co.id/api/v4/search/search_items?by=relevancy&limit=12&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2&keyword=viral";
+    
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://shopee.co.id/search?keyword=viral",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
 
-Kamu bisa generate 6 model utas berbeda. User akan menyebut model mana yang mau dipakai di awal pesan mereka.
+    if (!res.ok) {
+      throw new Error(`Shopee API status: ${res.status}`);
+    }
 
-═══════════════════════════════
-IDENTITAS & GAYA BAHASA (WAJIB SEMUA MODEL)
-═══════════════════════════════
-- Nulis seperti kreator konten Indonesia asli, bukan AI
-- Orang pertama: "aku"
-- Orang kedua: "kamu"
-- Orang ketiga jamak: "kalian"
-- Boleh singkatan: "udh", "bgt", "tp", "yg", "emg", "krn", "jd", "sih", "nih", "tbh", "ngl", "fr"
-- Boleh "..." untuk jeda natural
-- Boleh kalimat pendek menggantung untuk efek
-- DILARANG KERAS: "tentu saja", "sangat direkomendasikan", "luar biasa", "pastinya", "tentunya", "tidak diragukan lagi", "sebagai kesimpulan", "dengan demikian", "sempurna"
-- DILARANG nulis seperti brosur, iklan, atau artikel formal
-- Setiap utas dipisah dengan "---"
+    const data = await res.json();
+    const items = data?.items ?? [];
 
-═══════════════════════════════
-6 MODEL UTAS
-═══════════════════════════════
+    return items.slice(0, 8).map((item: any) => ({
+      name: item.item_basic.name,
+      category: "Viral",
+      reason: `${(item.item_basic.historical_sold / 1000).toFixed(1)}rb+ terjual`,
+      priceRange: `Rp ${Math.round(item.item_basic.price / 100000).toLocaleString("id-ID")}.000`,
+      source: "shopee",
+    }));
+  } catch (err: any) {
+    console.error("[Shopee Scraper] Error:", err.message);
+    return [];
+  }
+}
 
-──────────────────────────────
-MODEL 1: RANKING + REVIEW
-Dipanggil dengan: "ranking", "tahta tertinggi", atau "model 1"
-──────────────────────────────
-Utas 1 — Hook + daftar ranking:
-⚠️ TAHTA TERTINGGI [KATEGORI] [RANGE HARGA]
-1. [Produk] (±[harga])
-2. [Produk] (±[harga])
-...dst. Cuma daftar, tanpa penjelasan.
-PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
+// API Route for Shopee Trending
+app.get("/api/trending-shopee", async (req, res) => {
+  try {
+    const products = await fetchTrendingViaShopee();
+    res.json({ success: true, data: products });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
-Utas 2–N — Review per produk:
-[nomor]. [Nama Produk]
-Review 3–5 kalimat. Fokus ke pengalaman pakai, bukan daftar spek. Jujur soal kekurangan. Akhiri dengan verdict: cocok buat siapa.
+// ── Cache for Shopee Winning ─────────────────────────────────
+const shopeeCache = new Map<string, { data: any; ts: number }>();
+const SHOPEE_TTL = 60 * 60 * 1000; // 1 jam
 
-Utas terakhir — ajak kalian share versi sendiri.
+function cachedShopee(key: string, fn: () => Promise<any>) {
+  return async () => {
+    const hit = shopeeCache.get(key);
+    if (hit && Date.now() - hit.ts < SHOPEE_TTL) return hit.data;
+    const data = await fn();
+    shopeeCache.set(key, { data, ts: Date.now() });
+    return data;
+  };
+}
 
-──────────────────────────────
-MODEL 2: HIDDEN GEM
-Dipanggil dengan: "hidden gem", "underrated", atau "model 2"
-──────────────────────────────
-Utas 1 — Hook:
-💎 atau 🚨 + judul kapital soal produk yang "sering dilewatin". Bangun rasa penasaran. Tutup dengan "spill dulu ya."
-PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
+// ── Endpoint 1: Produk winning by keyword ────────────────────
+app.get("/api/shopee/winning", async (req, res) => {
+  try {
+    const keyword = (req.query.keyword as string) || "trending";
+    const limit = parseInt(req.query.limit as string) || 20;
+    const cacheKey = `winning:${keyword}:${limit}`;
 
-Utas 2–N — Per produk:
-[nomor]. [Nama Produk]
-Ceritain kenapa underrated. Apa yang bikin kaget waktu pertama coba. Verdict: siapa yang bakal suka ini.
+    const products = await cachedShopee(cacheKey, () =>
+      searchWinningProducts(keyword, limit)
+    )();
 
-Utas terakhir — ajak kalian share hidden gem versi sendiri.
+    res.json({ success: true, keyword, count: products.length, data: products });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
-──────────────────────────────
-MODEL 3: HEAD-TO-HEAD
-Dipanggil dengan: "head to head", "versus", "vs", atau "model 3"
-──────────────────────────────
-Utas 1 — Hook:
-⚔️ + sebutkan kedua produk. Ceritain kenapa akhirnya coba keduanya. Tutup: "oke aku jawab sekarang."
-PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
+// ── Endpoint 2: Top selling by kategori ──────────────────────
+app.get("/api/shopee/category", async (req, res) => {
+  try {
+    const name = (req.query.name as string) || "Semua";
+    const catId = SHOPEE_CATEGORIES[name] ?? 0;
+    const limit = parseInt(req.query.limit as string) || 20;
 
-Utas 2–N — Per kategori:
-ROUND [nomor] — [KATEGORI]
-Bandingkan keduanya jujur. Sebutkan pemenang round di akhir.
+    const products = await cachedShopee(`cat:${catId}`, () =>
+      getTopSellingByCategory(catId, limit)
+    )();
 
-Utas verdict — simpulkan: produk A cocok buat siapa, produk B buat siapa.
-Utas terakhir — ajak kalian yang udh pake share pengalaman.
+    res.json({ success: true, category: name, data: products });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
-──────────────────────────────
-MODEL 4: TIER LIST
-Dipanggil dengan: "tier list", "tier", atau "model 4"
-──────────────────────────────
-Utas 1 — Hook:
-🚨 TIER LIST [KATEGORI] VERSI AKU — NO FILTER
-Tegaskan ini opini pribadi, boleh beda. Kasih arah mau mulai dari tier mana.
-PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
+// ── Endpoint 3: Flash sale winners ───────────────────────────
+app.get("/api/shopee/flash", async (req, res) => {
+  try {
+    const products = await cachedShopee("flash", getFlashSaleWinners)();
+    res.json({ success: true, data: products });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
-Utas per tier:
-⭐ TIER S — [tagline] / ✅ TIER A / ⚠️ TIER B / ❌ TIER C
-Sebutkan produk di tier itu + alasan singkat 1–2 kalimat per produk. Boleh bilang "zonk" kalau emang begitu.
-
-Utas terakhir — ajak kalian share tier list versi sendiri.
-
-──────────────────────────────
-MODEL 5: CERITA PENGALAMAN
-Dipanggil dengan: "cerita", "pengalaman", "story", atau "model 5"
-──────────────────────────────
-Utas 1 — Hook story:
-Tidak harus pakai emoji. Kalimat pertama langsung masuk ke situasi atau perasaan. Contoh gaya: "ini sebenernya ga aku rencanain buat diposting..."
-PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
-
-Utas 2–N — Perjalanan cerita:
-Bangun kronologis: ekspektasi awal → momen pertama pakai → hal yang bikin kaget → pelajaran.
-
-Utas insight — simpulkan apa yang bisa diambil pembaca. Lebih dalam dari sekadar "worth it atau tidak."
-Utas terakhir — tanya ke kalian apakah punya pengalaman serupa.
-
-──────────────────────────────
-MODEL 6: TIPS & HACKS
-Dipanggil dengan: "tips", "hacks", "cara", atau "model 6"
-──────────────────────────────
-Utas 1 — Hook:
-⚡ atau 🔑 + judul kapital soal hal yang "wish aku tau lebih awal." Tutup dengan "share buat kalian yang mau mulai."
-PENTING: Di akhir Utas 1, tambahkan satu baris "[GAMBAR]: deskripsi visual singkat" untuk generate cover image otomatis.
-
-Utas 2–N — Per tips:
-[nomor]. [Nama Tips]
-Langsung jelasin tipsnya. Kenapa kebanyakan orang skip ini. Konteks dari pengalaman pribadi. Maksimal 4–5 kalimat.
-
-Utas terakhir — ajak kalian share tips tambahan yang mereka tau.
-
-──────────────────────────────
-MODEL 7: ROAST & IMPROVE
-Dipanggil dengan: "roast", "perbaiki", "improve", atau "model 7"
-──────────────────────────────
-Utas 1 — Hook:
-🔥 ROASTING THREAD INI: [JUDUL/TOPIK]
-Kasih opini jujur (tapi tetep asik) kenapa thread aslinya kurang nendang.
-
-Utas 2–N — Versi Perbaikan:
-Tulis ulang thread tersebut dengan gaya ThreadGen yang jauh lebih viral, hook lebih tajam, dan storytelling lebih dapet.
-
-Utas terakhir — bandingkan kenapa versi ini lebih baik.
-
-═══════════════════════════════
-FORMAT OUTPUT
-═══════════════════════════════
-- Tiap utas dipisah dengan "---"
-- Tidak pakai bullet point di dalam utas
-- Tidak pakai hashtag berlebihan
-- Panjang per utas: 2–6 kalimat, tidak bertele-tele
-- Output langsung thread, tanpa komentar pembuka dari kamu`;
+// ── Endpoint 4: Auto-scan multi-keyword (untuk "Trending Now") 
+app.get("/api/shopee/trending", async (req, res) => {
+  try {
+    const products = await cachedShopee("trending", () =>
+      scanWinningProducts()
+    )();
+    res.json({ success: true, count: products.length, data: products });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
-    environment: process.env.NODE_ENV,
-    vercel: !!process.env.VERCEL,
-    hasApiKey: !!process.env.GEMINI_API_KEY,
-    apiKeyLength: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0,
     timestamp: new Date().toISOString()
   });
 });
 
-// API Route for Thread Generation
-app.post("/api/generate-thread", async (req, res) => {
-  try {
-    const { topic, length, tone, image } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    
-    if (!apiKey || apiKey.trim() === "") {
-      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan. Tambahkan di Vercel Environment Variables." });
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    
-    const parts: any[] = [];
-    
-    if (image) {
-      parts.push({
-        inlineData: {
-          mimeType: image.mimeType || "image/jpeg",
-          data: image.data
-        }
-      });
-      parts.push({ text: `Analisis gambar produk ini (ekstrak nama, harga, rating, deskripsi unik) dan buatkan thread sesuai topik: ${topic || 'Review produk ini'}` });
-    } else {
-      parts.push({ text: topic });
-    }
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts }],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.8,
-        maxOutputTokens: 2048,
-      },
-    });
-
-    const text = response.text || "";
-    const tweets = text.split("---")
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
-
-    res.json({ tweets, booster: null });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Internal Server Error" });
-  }
-});
-
-// API Route for Image Generation
-app.post("/api/generate-image", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    
-    if (!apiKey || apiKey.trim() === "") {
-      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan." });
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts: [{ text: prompt }] },
-      config: { imageConfig: { aspectRatio: "1:1" } },
-    });
-
-    const candidate = response.candidates?.[0];
-    if (candidate?.content?.parts) {
-      for (const part of candidate.content.parts) {
-        if (part.inlineData) {
-          return res.json({ image: part.inlineData.data });
-        }
-      }
-    }
-    res.status(404).json({ error: "No image generated" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Internal Server Error" });
-  }
-});
-
-// API Route for Trending Topics
-app.get("/api/trending-topics", async (req, res) => {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey || apiKey.trim() === "") {
-      return res.status(500).json({ error: "GEMINI_API_KEY tidak ditemukan." });
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia Maret 2026. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: prompt }] }],
-    });
-
-    const topics = (response.text || "").split('\n')
-      .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
-      .filter(line => line.length > 0)
-      .slice(0, 7);
-
-    res.json({ topics });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Internal Server Error" });
-  }
-});
-
-// Local development server
+// Local development server & SPA fallback
 const isLocal = process.env.NODE_ENV !== "production" && !process.env.VERCEL;
 
 if (isLocal) {
@@ -277,6 +157,12 @@ if (isLocal) {
   } catch (err) {
     console.error("Failed to start local Vite server:", err);
   }
+} else {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 }
 
 export default app;

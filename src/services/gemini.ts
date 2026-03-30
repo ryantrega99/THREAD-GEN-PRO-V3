@@ -1,10 +1,9 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 
 export interface ThreadParams {
   topic: string;
   length?: 'PENDEK' | 'PANJANG' | 'REKOMENDASI';
   tone?: 'GALAK' | 'SANTAI' | 'MOTIVASI' | 'HUMOR' | 'HANIFMUH';
-  shopeeLinks?: string[];
 }
 
 export interface ViralBooster {
@@ -20,55 +19,49 @@ export interface ThreadResponse {
   booster?: ViralBooster;
 }
 
-const SYSTEM_INSTRUCTION = `Kamu adalah asisten yang bertugas menulis utas Twitter/X dalam Bahasa Indonesia.
+export interface TrendingProduct {
+  name: string;
+  category: string;
+  reason: string;
+  priceRange?: string;
+  source: "gemini" | "shopee";
+}
+
+const SYSTEM_INSTRUCTION = `Kamu adalah ThreadGen, asisten khusus untuk membuat konten thread Threads Indonesia.
 
 GAYA BAHASA:
-- Gunakan kata "saya", "kamu", "kalian" — bukan "gue" atau "lo"
+- Nulis seperti kreator konten Indonesia asli, bukan AI
+- Orang pertama: "aku", Orang kedua: "kamu", Orang ketiga jamak: "kalian"
+- Boleh singkatan: "udh", "bgt", "tp", "yg", "emg", "krn", "jd", "sih", "nih", "tbh", "ngl", "fr"
 - Santai, personal, dan relatable — kayak orang yang lagi sharing pengalaman ke temen
-- Boleh pakai singkatan: "yg", "dll", "bgt", "klo", "krn", "nggak"
-- Sesekali pakai ekspresi doa kalau konteksnya pas: "semoga nggak kejadian ya Allah", "amin"
-- Nada: serius tapi nggak menggurui
+- DILARANG KERAS: "tentu saja", "sangat direkomendasikan", "luar biasa", "pastinya", "tentunya", "tidak diragukan lagi", "sebagai kesimpulan", "dengan demikian", "sempurna"
 
 FORMAT OUTPUT:
 - Setiap tweet diberi nomor: 1/, 2/, 3/, dst.
 - Maksimal 280 karakter per tweet
-- Kalau poin-nya panjang, pecah jadi beberapa tweet
-- Boleh pakai emoji secukupnya, jangan lebay
+- Tiap tweet dipisah dengan "---"
+- Output langsung thread, tanpa komentar pembuka dari kamu
 
 STRUKTUR UTAS:
-1/ → Hook yang bikin penasaran, sedikit "ngaget-ngagetin" tapi jujur
-2/ → REKOMENDASI PRODUK: Setelah tweet pertama, WAJIB tambahkan satu tweet rekomendasi produk yang relevan dengan topik. 
-    Gunakan link Shopee yang diberikan oleh user. DILARANG KERAS menggunakan link Shopee lain atau link placeholder.
-    Jika user tidak memberikan link, gunakan placeholder "https://shope.ee/rekomendasi-produk" hanya jika benar-benar diperlukan.
-3/ → Konteks / kenapa topik ini penting sekarang
-4/ dst → Isi utama, satu poin atau satu kategori per tweet
+1/ → Hook yang bikin penasaran
+2/ → Rekomendasi produk (jika ada konteks)
+3/ dst → Isi utama
 N/ → Kesimpulan atau penutup
-N+1/ → CTA: save, repost, atau ajak tanya-tanya
-
-ATURAN PENTING:
-- Jangan pakai kata "gue" atau "lo" sama sekali
-- Selalu ada unsur solusi atau manfaat praktis
-- Kalau ada link produk dari user, cantumkan di tweet yang relevan
-- Topik bisa apa saja: survival, geopolitik, Islam, lifestyle, tips sehari-hari
+N+1/ → CTA
 
 Sertakan VIRAL BOOSTER di akhir dengan format:
 ===VIRAL_BOOSTER===
 HASHTAG: #tag1 #tag2 #tag3
-WAKTU POSTING TERBAIK: [Waktu, misal: 19:00 WIB]
+WAKTU POSTING TERBAIK: [Waktu]
 HOOK ALTERNATIF:
 1. [Hook 1]
 2. [Hook 2]
-
-Tunggu input topik dari user, lalu langsung tulis utas-nya.`;
+`;
 
 export async function generateThread(params: ThreadParams): Promise<ThreadResponse> {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey || apiKey.trim() === "") {
-      console.error("Critical: GEMINI_API_KEY is missing in process.env inside gemini.ts");
-      throw new Error("GEMINI_API_KEY tidak ditemukan di server. Pastikan Anda sudah menambahkan 'GEMINI_API_KEY' di Environment Variables Vercel dan melakukan redeploy.");
-    }
+    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
 
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `BUAT UTAS TWITTER/X TENTANG: ${params.topic}`;
@@ -83,54 +76,116 @@ export async function generateThread(params: ThreadParams): Promise<ThreadRespon
     });
 
     const text = response.text || "";
-    
-    // Split Content
     const [mainContent, boosterPart] = text.split("===VIRAL_BOOSTER===");
-    const [threadPart, scorePart] = (mainContent || "").split("===VIRAL_SCORE===");
-    const [threadContent, ghostingPart] = (threadPart || "").split("===ANTI_GHOSTING===");
     
-    let tweets = (threadContent || "").split("---").map(t => t.trim()).filter(t => t.length > 0);
+    let tweets = (mainContent || "").split("---").map(t => t.trim()).filter(t => t.length > 0);
     
     if (tweets.length <= 1) {
       const numberingRegex = /\n(?=\d+\/)/g;
-      const splitByNumbering = (threadContent || "").split(numberingRegex).map(t => t.trim()).filter(t => t.length > 0);
-      if (splitByNumbering.length > 1) {
-        tweets = splitByNumbering;
-      }
+      const splitByNumbering = (mainContent || "").split(numberingRegex).map(t => t.trim()).filter(t => t.length > 0);
+      if (splitByNumbering.length > 1) tweets = splitByNumbering;
     }
 
-    if (tweets.length === 0 && (threadContent || "").length > 0) {
-      tweets = [threadContent.trim()];
-    }
-
-    // Parse Booster
-    let booster: ViralBooster | null = null;
+    let booster: ViralBooster | undefined;
     if (boosterPart) {
       const lines = boosterPart.trim().split('\n');
-      const hashtags = lines.find(l => l.includes('HASHTAG:'))?.split('HASHTAG:')[1]?.trim();
-      const bestTime = lines.find(l => l.includes('WAKTU POSTING TERBAIK:'))?.split('WAKTU POSTING TERBAIK:')[1]?.trim();
-      const hooks = lines.filter(l => l.match(/^\d\./)).map(l => l.replace(/^\d\.\s*/, '').trim());
-      
       booster = {
-        hashtags,
-        bestTime,
-        hooks
+        hashtags: lines.find(l => l.includes('HASHTAG:'))?.split('HASHTAG:')[1]?.trim(),
+        bestTime: lines.find(l => l.includes('WAKTU POSTING TERBAIK:'))?.split('WAKTU POSTING TERBAIK:')[1]?.trim(),
+        hooks: lines.filter(l => l.match(/^\d\./)).map(l => l.replace(/^\d\.\s*/, '').trim())
       };
     }
 
-    // Add Score and Ghosting info to booster if they exist
-    if (scorePart || ghostingPart) {
-      if (!booster) booster = {};
-      if (scorePart) booster.viralScore = scorePart.trim();
-      if (ghostingPart) booster.antiGhosting = ghostingPart.trim();
-    }
-
-    return {
-      tweets: tweets || [],
-      booster: booster || undefined
-    };
+    return { tweets, booster };
   } catch (error) {
     console.error("Error generating thread:", error);
+    throw error;
+  }
+}
+
+export async function fetchTrendingTopics(): Promise<string[]> {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
+
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia saat ini. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: prompt }] }],
+    });
+
+    return (response.text || "").split('\n')
+      .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
+      .filter(line => line.length > 0)
+      .slice(0, 7);
+  } catch (error) {
+    console.error("Error fetching trending topics:", error);
+    return [];
+  }
+}
+
+export async function fetchTrendingViaGemini(): Promise<TrendingProduct[]> {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
+
+    const ai = new GoogleGenAI({ apiKey });
+    const today = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+    const prompt = `
+Hari ini ${today}. Cari produk yang sedang paling viral dan trending di Shopee Indonesia saat ini.
+Berikan TEPAT 6 produk dalam format JSON array berikut, tanpa teks lain:
+[
+  {
+    "name": "nama produk spesifik",
+    "category": "kategori",
+    "reason": "alasan singkat kenapa trending",
+    "priceRange": "estimasi range harga"
+  }
+]
+    `.trim();
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json"
+      },
+    });
+
+    const text = response.text || "[]";
+    const parsed = JSON.parse(text);
+    return parsed.map((p: any) => ({ ...p, source: "gemini" as const }));
+  } catch (error) {
+    console.error("Error fetching trending products via Gemini:", error);
+    return [];
+  }
+}
+
+export async function generateCoverImage(prompt: string): Promise<string> {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY tidak ditemukan.");
+
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: `A vibrant, high-quality social media cover image for: ${prompt}. Modern aesthetic, no text.` }] },
+      config: { imageConfig: { aspectRatio: "1:1" } },
+    });
+
+    const candidate = response.candidates?.[0];
+    if (candidate?.content?.parts) {
+      for (const part of candidate.content.parts) {
+        if (part.inlineData) return part.inlineData.data;
+      }
+    }
+    throw new Error("Gagal generate gambar.");
+  } catch (error) {
+    console.error("Error generating image:", error);
     throw error;
   }
 }
