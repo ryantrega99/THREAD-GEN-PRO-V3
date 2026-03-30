@@ -214,6 +214,14 @@ function App() {
   const [viralScoreB, setViralScoreB] = useState<number | null>(null);
 
   const [isApiKeyMissing, setIsApiKeyMissing] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const debugInfo = {
+    "process.env.GEMINI_API_KEY": process.env.GEMINI_API_KEY ? `Found (len: ${process.env.GEMINI_API_KEY.length}, starts with: ${process.env.GEMINI_API_KEY.substring(0, 4)}...)` : "Not Found",
+    "process.env.API_KEY": process.env.API_KEY ? `Found (len: ${process.env.API_KEY.length}, starts with: ${process.env.API_KEY.substring(0, 4)}...)` : "Not Found",
+    "import.meta.env.VITE_GEMINI_API_KEY": (import.meta as any).env?.VITE_GEMINI_API_KEY ? `Found (len: ${(import.meta as any).env.VITE_GEMINI_API_KEY.length})` : "Not Found",
+    "NODE_ENV": process.env.NODE_ENV,
+    "isApiKeyMissing": isApiKeyMissing.toString()
+  };
 
   useEffect(() => {
     const checkApiKey = async () => {
@@ -1106,15 +1114,6 @@ function App() {
       </div>
     );
   }
-
-  const [showDebug, setShowDebug] = useState(false);
-  const debugInfo = {
-    "process.env.GEMINI_API_KEY": process.env.GEMINI_API_KEY ? `Found (len: ${process.env.GEMINI_API_KEY.length}, starts with: ${process.env.GEMINI_API_KEY.substring(0, 4)}...)` : "Not Found",
-    "process.env.API_KEY": process.env.API_KEY ? `Found (len: ${process.env.API_KEY.length}, starts with: ${process.env.API_KEY.substring(0, 4)}...)` : "Not Found",
-    "import.meta.env.VITE_GEMINI_API_KEY": (import.meta as any).env?.VITE_GEMINI_API_KEY ? `Found (len: ${(import.meta as any).env.VITE_GEMINI_API_KEY.length})` : "Not Found",
-    "NODE_ENV": process.env.NODE_ENV,
-    "isApiKeyMissing": isApiKeyMissing.toString()
-  };
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans selection:bg-indigo-600/10">
