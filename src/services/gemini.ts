@@ -102,14 +102,28 @@ export async function generateThread(params: ThreadParams): Promise<ThreadRespon
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     
+    const isRanking = params.topic.toLowerCase().startsWith('ranking:');
+    const cleanTopic = isRanking ? params.topic.replace(/^ranking:\s*/i, '') : params.topic;
+
     const prompt = `
-BUAT UTAS TWITTER/X TENTANG: ${params.topic}
+BUAT UTAS TWITTER/X TENTANG: ${cleanTopic}
 TONE: ${params.tone || 'SANTAI'}
 PANJANG UTAS: ${params.length || 'PENDEK'} (Jika PENDEK: 3-5 tweet, jika PANJANG: 7-10 tweet, jika REKOMENDASI: sesuaikan jumlah item)
 
+${isRanking ? `
+KHUSUS UNTUK FORMAT RANKING:
+Tweet 1 WAJIB menggunakan format persis seperti ini:
+TAHTA TERTINGGI ${cleanTopic.toUpperCase()} SESUAI KEUNGGULANNYA
+1. [Keunggulan/Kategori] : [Nama Produk/Brand] ([Estimasi Harga])
+2. [Keunggulan/Kategori] : [Nama Produk/Brand] ([Estimasi Harga])
+... (lanjutkan sampai minimal 5-6 item)
+
+Tweet 2 dan seterusnya:
+Berikan penjelasan singkat dan padat untuk masing-masing item di atas dengan gaya bahasa ${params.tone || 'SANTAI'}.
+` : `
 Instruksi Tambahan:
-- Jika ini adalah ranking produk, gunakan format "TAHTA TERTINGGI" di tweet pertama.
 - Pastikan bahasa sangat ${params.tone || 'SANTAI'} dan relatable.
+`}
 `.trim();
 
     const response: GenerateContentResponse = await ai.models.generateContent({
