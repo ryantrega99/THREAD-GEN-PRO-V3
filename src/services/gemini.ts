@@ -70,6 +70,11 @@ STRUKTUR UTAS (UMUM):
 N/ → Kesimpulan atau penutup
 N+1/ → CTA
 
+KEBIJAKAN PRODUK:
+- Hanya cantumkan produk yang saat ini tersedia di Shopee Indonesia.
+- DILARANG mencantumkan produk yang sudah discontinue (tidak diproduksi lagi) atau sangat sulit dicari.
+- Pastikan harga yang dicantumkan adalah estimasi harga terbaru di marketplace.
+
 Sertakan VIRAL BOOSTER di akhir dengan format:
 ===VIRAL_BOOSTER===
 HASHTAG: #tag1 #tag2 #tag3
@@ -120,9 +125,13 @@ TAHTA TERTINGGI ${cleanTopic.toUpperCase()} SESUAI KEUNGGULANNYA
 
 Tweet 2 dan seterusnya:
 Berikan penjelasan singkat dan padat untuk masing-masing item di atas dengan gaya bahasa ${params.tone || 'SANTAI'}.
+
+PENTING:
+- Hanya pilih produk yang masih dijual di Shopee dan BUKAN barang discontinue.
 ` : `
 Instruksi Tambahan:
 - Pastikan bahasa sangat ${params.tone || 'SANTAI'} dan relatable.
+- Hanya pilih produk yang masih dijual di Shopee dan BUKAN barang discontinue.
 `}
 `.trim();
 
