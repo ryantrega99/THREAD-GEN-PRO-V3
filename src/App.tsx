@@ -548,8 +548,14 @@ function App() {
         }
       }
     } catch (err: any) {
-      const msg = err.message || 'Terjadi kesalahan sistem';
-      setError(`Error: ${msg}`);
+      let msg = err.message || 'Terjadi kesalahan sistem';
+      
+      // Handle Quota Exceeded (429) specifically
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+        msg = "Kuota harian Gemini API kamu sudah habis atau terlalu cepat kliknya. 🙏\n\nSilakan tunggu 1 menit atau coba lagi besok. Kamu juga bisa ganti API Key di menu Settings.";
+      }
+      
+      setError(msg);
     } finally {
       if (isVersionB) setIsGeneratingB(false);
       else setIsGenerating(false);
