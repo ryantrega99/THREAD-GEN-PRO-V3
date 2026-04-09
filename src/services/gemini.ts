@@ -71,6 +71,7 @@ N/ → Kesimpulan atau penutup
 N+1/ → CTA
 
 KEBIJAKAN PRODUK:
+- Gunakan Google Search untuk mencari informasi terbaru tentang produk, spesifikasi, dan harga.
 - Hanya cantumkan produk yang saat ini tersedia di Shopee Indonesia.
 - DILARANG mencantumkan produk yang sudah discontinue (tidak diproduksi lagi) atau sangat sulit dicari.
 - Pastikan harga yang dicantumkan adalah estimasi harga terbaru di marketplace.
@@ -141,6 +142,7 @@ Instruksi Tambahan:
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
+        tools: [{ googleSearch: {} }],
       },
     });
 
