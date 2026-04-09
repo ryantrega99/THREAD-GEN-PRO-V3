@@ -137,7 +137,7 @@ Instruksi Tambahan:
 `.trim();
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -181,7 +181,7 @@ export async function fetchTrendingTopics(): Promise<string[]> {
     const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia saat ini. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
     });
 
@@ -215,7 +215,7 @@ Berikan TEPAT 6 produk dalam format JSON array berikut, tanpa teks lain:
     `.trim();
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleSearch: {} }],
