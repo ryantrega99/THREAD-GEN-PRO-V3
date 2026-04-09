@@ -85,21 +85,31 @@ HOOK ALTERNATIF:
 2. [Hook 2]
 `;
 
-function getApiKey(): string {
-  // Check multiple possible locations for the API key
-  const key = 
-    process.env.GEMINI_API_KEY || 
-    process.env.API_KEY || 
-    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-    (import.meta as any).env?.GEMINI_API_KEY;
+let currentKeyIndex = 0;
 
-  if (!key || key === "undefined" || key === "null") {
-    console.error("Gemini API Key missing. Checked process.env.GEMINI_API_KEY, process.env.API_KEY, and import.meta.env.");
-    throw new Error("Gemini API Key tidak ditemukan. Pastikan Anda sudah memasukkan GEMINI_API_KEY di Settings (AI Studio) atau Environment Variables (Vercel).");
+function getApiKey(): string {
+  // Check for multiple keys for rotation
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.API_KEY,
+    (import.meta as any).env?.VITE_GEMINI_API_KEY,
+    (import.meta as any).env?.GEMINI_API_KEY
+  ].filter(k => k && k !== "undefined" && k !== "null") as string[];
+
+  if (keys.length === 0) {
+    console.error("Gemini API Key missing.");
+    throw new Error("Gemini API Key tidak ditemukan. Pastikan Anda sudah memasukkan GEMINI_API_KEY di Settings (AI Studio) atau Environment Variables.");
   }
   
+  // Rotate keys
+  const key = keys[currentKeyIndex % keys.length];
+  currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+  
   // Debug log (obfuscated)
-  console.log(`Gemini API Key found, length: ${key.length}, starts with: ${key.substring(0, 4)}...`);
+  console.log(`Using Gemini API Key (Index: ${currentKeyIndex}), starts with: ${key.substring(0, 4)}...`);
   return key;
 }
 
