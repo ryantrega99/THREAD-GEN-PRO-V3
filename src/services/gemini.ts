@@ -127,14 +127,32 @@ Instruksi Tambahan:
 `}
 `.trim();
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.8,
-      },
-    });
+    let response: GenerateContentResponse;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: 0.8,
+        },
+      });
+    } catch (error: any) {
+      const errStr = JSON.stringify(error);
+      if (errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED")) {
+        console.warn("Gemini 2.0 Flash quota exceeded, falling back to Gemini 1.5 Flash...");
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [{ parts: [{ text: prompt }] }],
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            temperature: 0.8,
+          },
+        });
+      } else {
+        throw error;
+      }
+    }
 
     const text = response.text || "";
     const [mainContent, boosterPart] = text.split("===VIRAL_BOOSTER===");
@@ -170,10 +188,23 @@ export async function fetchTrendingTopics(): Promise<string[]> {
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia saat ini. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ parts: [{ text: prompt }] }],
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: [{ parts: [{ text: prompt }] }],
+      });
+    } catch (error: any) {
+      const errStr = JSON.stringify(error);
+      if (errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED")) {
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [{ parts: [{ text: prompt }] }],
+        });
+      } else {
+        throw error;
+      }
+    }
 
     return (response.text || "").split('\n')
       .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
@@ -204,14 +235,31 @@ Berikan TEPAT 6 produk dalam format JSON array berikut, tanpa teks lain:
 ]
     `.trim();
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json"
-      },
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json"
+        },
+      });
+    } catch (error: any) {
+      const errStr = JSON.stringify(error);
+      if (errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED")) {
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [{ parts: [{ text: prompt }] }],
+          config: {
+            tools: [{ googleSearch: {} }],
+            responseMimeType: "application/json"
+          },
+        });
+      } else {
+        throw error;
+      }
+    }
 
     const text = response.text || "[]";
     const parsed = JSON.parse(text);

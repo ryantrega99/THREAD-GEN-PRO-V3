@@ -274,6 +274,8 @@ function App() {
       const errStr = JSON.stringify(err);
       if (err.message?.includes("API key not valid") || errStr.includes("API_KEY_INVALID") || errStr.includes("400")) {
         setError("API Key Gemini tidak valid. Silakan periksa kembali di Settings.");
+      } else if (errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || (err.message && err.message.includes("quota"))) {
+        setError("Kuota API Gemini habis. Silakan tunggu sebentar atau gunakan API Key lain.");
       }
       setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
       setTrendingTimestamp(null);
@@ -310,6 +312,8 @@ function App() {
       const errStr = JSON.stringify(err);
       if (err.message?.includes("API key not valid") || errStr.includes("API_KEY_INVALID") || errStr.includes("400")) {
         setError("API Key Gemini tidak valid. Silakan periksa kembali di Settings.");
+      } else if (errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || (err.message && err.message.includes("quota"))) {
+        setError("Kuota API Gemini habis. Silakan tunggu sebentar.");
       }
     } finally {
       setIsFetchingProducts(false);
@@ -559,10 +563,12 @@ function App() {
       console.error("Generate Error:", err);
       let msg = err.message || 'Terjadi kesalahan sistem';
       
-      // Check for API key invalid error from Google
+      // Check for API key invalid or quota error from Google
       const errStr = JSON.stringify(err);
       if (msg.includes("API key not valid") || errStr.includes("API_KEY_INVALID") || errStr.includes("400")) {
-        msg = "API Key Gemini tidak valid. Silakan periksa kembali API Key Anda di menu Settings (ikon roda gigi) atau pastikan kuota API Anda masih tersedia.";
+        msg = "API Key Gemini tidak valid. Silakan periksa kembali API Key Anda di menu Settings (ikon roda gigi).";
+      } else if (errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || msg.includes("quota")) {
+        msg = "Kuota API Gemini Anda telah habis (Limit Tercapai). Silakan tunggu beberapa menit atau gunakan API Key lain yang memiliki kuota tersedia.";
       }
       
       setError(`Error: ${msg}`);
