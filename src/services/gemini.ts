@@ -87,13 +87,14 @@ function getApiKey(): string {
     (import.meta as any).env?.VITE_GEMINI_API_KEY ||
     (import.meta as any).env?.GEMINI_API_KEY;
 
-  if (!key || key === "undefined" || key === "null") {
-    console.error("Gemini API Key missing. Checked process.env.GEMINI_API_KEY, process.env.API_KEY, and import.meta.env.");
-    throw new Error("Gemini API Key tidak ditemukan. Pastikan Anda sudah memasukkan GEMINI_API_KEY di Settings (AI Studio) atau Environment Variables (Vercel).");
+  if (!key || key === "undefined" || key === "null" || key.includes("TODO_")) {
+    console.error("Gemini API Key missing or placeholder. Value:", key);
+    throw new Error("Gemini API Key tidak ditemukan atau masih berupa placeholder. Pastikan Anda sudah memasukkan API Key yang valid di Settings (AI Studio) atau Environment Variables.");
   }
   
   // Debug log (obfuscated)
-  console.log(`Gemini API Key found, length: ${key.length}, starts with: ${key.substring(0, 4)}...`);
+  const maskedKey = `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
+  console.log(`Gemini API Key found: ${maskedKey} (length: ${key.length})`);
   return key;
 }
 
@@ -127,7 +128,7 @@ Instruksi Tambahan:
 `.trim();
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -170,7 +171,7 @@ export async function fetchTrendingTopics(): Promise<string[]> {
     const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia saat ini. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
     });
 
@@ -204,7 +205,7 @@ Berikan TEPAT 6 produk dalam format JSON array berikut, tanpa teks lain:
     `.trim();
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleSearch: {} }],
@@ -226,7 +227,7 @@ export async function generateCoverImage(prompt: string): Promise<string> {
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-2.0-flash',
       contents: { parts: [{ text: `A vibrant, high-quality social media cover image for: ${prompt}. Modern aesthetic, no text.` }] },
       config: { imageConfig: { aspectRatio: "1:1" } },
     });

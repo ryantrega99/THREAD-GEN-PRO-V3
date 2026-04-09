@@ -231,7 +231,7 @@ function App() {
         (import.meta as any).env?.VITE_GEMINI_API_KEY ||
         (import.meta as any).env?.GEMINI_API_KEY;
 
-      if (!key || key === "undefined" || key === "null") {
+      if (!key || key === "undefined" || key === "null" || key.includes("TODO_")) {
         setIsApiKeyMissing(true);
       } else {
         setIsApiKeyMissing(false);
@@ -269,8 +269,12 @@ function App() {
         setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
         setTrendingTimestamp(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Fetch trending error:", err);
+      const errStr = JSON.stringify(err);
+      if (err.message?.includes("API key not valid") || errStr.includes("API_KEY_INVALID") || errStr.includes("400")) {
+        setError("API Key Gemini tidak valid. Silakan periksa kembali di Settings.");
+      }
       setTrendingTopics(["Ketik topik manual di bawah ya 🙏"]);
       setTrendingTimestamp(null);
     } finally {
@@ -301,8 +305,12 @@ function App() {
       // Merge and shuffle slightly
       const merged = [...geminiProducts, ...shopeeProducts].sort(() => Math.random() - 0.5);
       setTrendingProducts(merged.slice(0, 8));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Fetch products error:", err);
+      const errStr = JSON.stringify(err);
+      if (err.message?.includes("API key not valid") || errStr.includes("API_KEY_INVALID") || errStr.includes("400")) {
+        setError("API Key Gemini tidak valid. Silakan periksa kembali di Settings.");
+      }
     } finally {
       setIsFetchingProducts(false);
     }
@@ -548,7 +556,15 @@ function App() {
         }
       }
     } catch (err: any) {
-      const msg = err.message || 'Terjadi kesalahan sistem';
+      console.error("Generate Error:", err);
+      let msg = err.message || 'Terjadi kesalahan sistem';
+      
+      // Check for API key invalid error from Google
+      const errStr = JSON.stringify(err);
+      if (msg.includes("API key not valid") || errStr.includes("API_KEY_INVALID") || errStr.includes("400")) {
+        msg = "API Key Gemini tidak valid. Silakan periksa kembali API Key Anda di menu Settings (ikon roda gigi) atau pastikan kuota API Anda masih tersedia.";
+      }
+      
       setError(`Error: ${msg}`);
     } finally {
       if (isVersionB) setIsGeneratingB(false);
@@ -1238,9 +1254,9 @@ function App() {
                   </p>
                   <button 
                     onClick={handleOpenKeySelection}
-                    className="w-full py-2 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-colors"
+                    className="w-full py-2 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-all flex items-center justify-center gap-2"
                   >
-                    Set API Key
+                    <Wrench className="w-4 h-4" /> Perbaiki API Key
                   </button>
                 </div>
               )}
@@ -1655,12 +1671,22 @@ function App() {
                     <motion.div 
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 border-2 border-red-100 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-red-600 font-bold flex items-center gap-3 sm:gap-4"
+                      className="bg-red-50 border-2 border-red-100 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-red-600 font-bold flex flex-col gap-4"
                     >
-                      <div className="bg-red-100 p-2 rounded-lg sm:rounded-xl">
-                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="bg-red-100 p-2 rounded-lg sm:rounded-xl">
+                          <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </div>
+                        <span className="text-sm sm:text-base">{error}</span>
                       </div>
-                      <span className="text-sm sm:text-base">{error}</span>
+                      {error.includes("API Key") && (
+                        <button 
+                          onClick={handleOpenKeySelection}
+                          className="w-full py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Wrench className="w-4 h-4" /> Perbaiki API Key
+                        </button>
+                      )}
                     </motion.div>
                   )}
 
