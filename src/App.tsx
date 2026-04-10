@@ -553,6 +553,8 @@ function App() {
       // Handle Quota Exceeded (429) specifically
       if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
         msg = "Kuota harian Gemini API kamu sudah habis atau terlalu cepat kliknya. 🙏\n\nSilakan tunggu 1 menit atau coba lagi besok. Kamu juga bisa ganti API Key di menu Settings.";
+      } else if (msg.includes('API key not valid') || msg.includes('INVALID_ARGUMENT')) {
+        msg = "API Key yang kamu masukkan tidak valid atau salah ketik. ❌\n\nSilakan cek kembali API Key di menu Settings (ikon roda gigi) atau di Environment Variables kamu.";
       }
       
       setError(msg);

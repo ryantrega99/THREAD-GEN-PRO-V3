@@ -97,7 +97,7 @@ function getApiKey(): string {
     process.env.API_KEY,
     (import.meta as any).env?.VITE_GEMINI_API_KEY,
     (import.meta as any).env?.GEMINI_API_KEY
-  ].filter(k => k && k !== "undefined" && k !== "null") as string[];
+  ].filter(k => k && k !== "undefined" && k !== "null").map(k => k.trim()) as string[];
 
   if (keys.length === 0) {
     console.error("Gemini API Key missing.");
