@@ -4,6 +4,7 @@ export interface ThreadParams {
   topic: string;
   length?: 'PENDEK' | 'PANJANG' | 'REKOMENDASI';
   tone?: 'GALAK' | 'SANTAI' | 'MOTIVASI' | 'HUMOR' | 'HANIFMUH';
+  useSearch?: boolean;
 }
 
 export interface ViralBooster {
@@ -87,17 +88,17 @@ HOOK ALTERNATIF:
 
 let currentKeyIndex = 0;
 
-function getApiKey(): string {
-  // Check for multiple keys for rotation
-  const keys = [
+function getAllApiKeys(): string[] {
+  return [
     process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_1,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
     process.env.API_KEY,
     (import.meta as any).env?.VITE_GEMINI_API_KEY,
     (import.meta as any).env?.GEMINI_API_KEY
   ].filter(k => k && k !== "undefined" && k !== "null").map(k => k.trim()) as string[];
+}
+
+function getApiKey(): string {
+  const keys = getAllApiKeys();
 
   if (keys.length === 0) {
     console.error("Gemini API Key missing.");
@@ -108,16 +109,35 @@ function getApiKey(): string {
   const key = keys[currentKeyIndex % keys.length];
   currentKeyIndex = (currentKeyIndex + 1) % keys.length;
   
-  // Debug log (obfuscated)
-  console.log(`Using Gemini API Key (Index: ${currentKeyIndex}), starts with: ${key.substring(0, 4)}...`);
   return key;
 }
 
-export async function generateThread(params: ThreadParams): Promise<ThreadResponse> {
-  try {
+async function callGeminiWithRetry(fn: (ai: GoogleGenAI) => Promise<any>): Promise<any> {
+  const keys = getAllApiKeys();
+  let lastError: any;
+
+  // Try each key once if we hit a quota error
+  for (let i = 0; i < Math.max(1, keys.length); i++) {
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
     
+    try {
+      return await fn(ai);
+    } catch (error: any) {
+      lastError = error;
+      const msg = error.message || "";
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+        console.warn(`Key index ${currentKeyIndex - 1} hit quota, retrying with next key...`);
+        continue;
+      }
+      throw error; // Rethrow if it's not a quota error
+    }
+  }
+  throw lastError;
+}
+
+export async function generateThread(params: ThreadParams): Promise<ThreadResponse> {
+  return callGeminiWithRetry(async (ai) => {
     const isRanking = params.topic.toLowerCase().startsWith('ranking:');
     const cleanTopic = isRanking ? params.topic.replace(/^ranking:\s*/i, '') : params.topic;
 
@@ -141,7 +161,7 @@ PENTING:
 - Hanya pilih produk yang masih dijual di Shopee dan BUKAN barang discontinue.
 ` : `
 Instruksi Tambahan:
-- Pastikan bahasa sangat ${params.tone || 'SANTAI'} dan relatable.
+- Pastikan bahasa sangat ${params.tone || 'SANTAI'} and relatable.
 - Hanya pilih produk yang masih dijual di Shopee dan BUKAN barang discontinue.
 `}
 `.trim();
@@ -152,7 +172,7 @@ Instruksi Tambahan:
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.8,
-        tools: [{ googleSearch: {} }],
+        ...(params.useSearch !== false ? { tools: [{ googleSearch: {} }] } : {}),
       },
     });
 
@@ -178,16 +198,11 @@ Instruksi Tambahan:
     }
 
     return { tweets, booster };
-  } catch (error) {
-    console.error("Error generating thread:", error);
-    throw error;
-  }
+  });
 }
 
 export async function fetchTrendingTopics(): Promise<string[]> {
-  try {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+  return callGeminiWithRetry(async (ai) => {
     const prompt = `Sebutkan 7 ide konten viral untuk Threads Indonesia saat ini. Sertakan modelnya di awal (misal: 'Ranking: Tablet 3jt', 'Hidden Gem: Cafe Jaksel', 'Tips: Produktivitas'). Format: [emoji] Model: Topik.`;
 
     const response = await ai.models.generateContent({
@@ -199,16 +214,14 @@ export async function fetchTrendingTopics(): Promise<string[]> {
       .map(line => line.replace(/^\d+[\.\)]\s*/, '').trim())
       .filter(line => line.length > 0)
       .slice(0, 7);
-  } catch (error) {
+  }).catch(error => {
     console.error("Error fetching trending topics:", error);
     return [];
-  }
+  });
 }
 
 export async function fetchTrendingViaGemini(): Promise<TrendingProduct[]> {
-  try {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+  return callGeminiWithRetry(async (ai) => {
     const today = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 
     const prompt = `
@@ -236,16 +249,14 @@ Berikan TEPAT 6 produk dalam format JSON array berikut, tanpa teks lain:
     const text = response.text || "[]";
     const parsed = JSON.parse(text);
     return parsed.map((p: any) => ({ ...p, source: "gemini" as const }));
-  } catch (error) {
+  }).catch(error => {
     console.error("Error fetching trending products via Gemini:", error);
     return [];
-  }
+  });
 }
 
 export async function generateCoverImage(prompt: string): Promise<string> {
-  try {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+  return callGeminiWithRetry(async (ai) => {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ text: `A vibrant, high-quality social media cover image for: ${prompt}. Modern aesthetic, no text.` }] },
@@ -259,8 +270,5 @@ export async function generateCoverImage(prompt: string): Promise<string> {
       }
     }
     throw new Error("Gagal generate gambar.");
-  } catch (error) {
-    console.error("Error generating image:", error);
-    throw error;
-  }
+  });
 }

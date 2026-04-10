@@ -192,8 +192,10 @@ function App() {
   const [params, setParams] = useState<ThreadParams>({
     topic: '',
     length: 'PENDEK',
-    tone: 'SANTAI'
+    tone: 'SANTAI',
+    useSearch: true
   });
+  const [cooldown, setCooldown] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [thread, setThread] = useState<string[]>([]);
@@ -498,12 +500,20 @@ function App() {
   const [threadB, setThreadB] = useState<string[]>([]);
   const [isGeneratingB, setIsGeneratingB] = useState(false);
 
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
   const handleGenerate = async (isVersionB = false) => {
-    if (!params.topic) return;
+    if (!params.topic || cooldown > 0) return;
 
     if (isVersionB) setIsGeneratingB(true);
     else setIsGenerating(true);
     
+    setCooldown(10); // 10 seconds cooldown
     setIsGeneratingImage(false);
     setError(null);
     if (!isVersionB) {
@@ -552,7 +562,7 @@ function App() {
       
       // Handle Quota Exceeded (429) specifically
       if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
-        msg = "Kuota harian Gemini API kamu sudah habis atau terlalu cepat kliknya. 🙏\n\nSilakan tunggu 1 menit atau coba lagi besok. Kamu juga bisa ganti API Key di menu Settings.";
+        msg = "Waduh, kena limit lagi! 🛑\n\nTips agar lancar:\n1. Matikan tombol 'Search: ON' di atas (hemat kuota 5x lipat).\n2. Tunggu cooldown tombol selesai.\n3. Pastikan API Key kamu di Settings masih aktif.";
       } else if (msg.includes('API key not valid') || msg.includes('INVALID_ARGUMENT')) {
         msg = "API Key yang kamu masukkan tidak valid atau salah ketik. ❌\n\nSilakan cek kembali API Key di menu Settings (ikon roda gigi) atau di Environment Variables kamu.";
       }
@@ -1380,6 +1390,19 @@ function App() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Creative Engine</label>
+                    <button
+                      onClick={() => setParams({ ...params, useSearch: !params.useSearch })}
+                      className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all ${
+                        params.useSearch 
+                          ? 'bg-green-50 text-green-600 border-green-200' 
+                          : 'bg-gray-50 text-gray-400 border-gray-200'
+                      }`}
+                    >
+                      <Globe className={`w-3 h-3 ${params.useSearch ? 'animate-pulse' : ''}`} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">
+                        Search: {params.useSearch ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {[
@@ -1423,13 +1446,18 @@ function App() {
 
                 <button 
                   onClick={() => handleGenerate()}
-                  disabled={isGenerating || !params.topic}
+                  disabled={isGenerating || !params.topic || cooldown > 0}
                   className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-[0_20px_40px_rgba(79,70,229,0.2)] hover:shadow-[0_20px_40px_rgba(79,70,229,0.4)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex flex-col items-center justify-center gap-1 text-base relative overflow-hidden group"
                 >
                   {isGenerating ? (
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-6 h-6 animate-spin" />
                       Brewing Magic...
+                    </div>
+                  ) : cooldown > 0 ? (
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-6 h-6" />
+                      Wait {cooldown}s...
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
